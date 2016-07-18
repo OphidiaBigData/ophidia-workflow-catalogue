@@ -1,0 +1,190 @@
+{
+    "name": "Ensemble analysis related to precipitation trend analysis",
+    "author": "CMCC",
+    "abstract": "Usage: /path/precip_trend_analysis_ensemble.json 2 file1.nc|file2.nc pathscript",
+    "exec_mode": "sync",
+    "ncores": "1",
+    "on_exit":"oph_delete",
+    "tasks": [
+	{
+            "name": "Delete Work Container",
+            "operator": "oph_deletecontainer",
+            "arguments": [
+                "container=ensemble",
+                "hidden=no",
+                "delete_type=physical"
+            ],
+            "on_error": "skip"
+        },
+        {
+            "name": "Create Work Container",
+            "operator": "oph_createcontainer",
+            "arguments": [
+                "container=ensemble",
+                "dim=lat|lon",
+                "dim_type=double|double",
+                "hierarchy=oph_base|oph_base",
+                "compressed=no",
+                "ncores=1"
+            ],
+            "dependencies": [
+                {
+                    "task": "Delete Work Container"
+                }
+            ],
+            "on_error": "skip"
+        },
+        {
+            "name": "loop",
+            "operator": "oph_for",
+            "arguments": [
+                "name=name_file",
+                "values=${1}",
+                "parallel=yes"
+            ],
+            "dependencies": [
+                {
+                    "task": "Create Work Container",
+                    "type": "single"
+                }
+            ]
+        },
+        {
+            "name": "import",
+            "operator": "oph_importnc2",
+            "arguments": [
+                "cwd=/",
+                "measure=precip_trend",
+                "src_path=@{name_file}",
+                "import_metadata=yes",
+                "nfrag=1",
+                "container=ensemble",
+                "grid=map"
+            ],
+            "dependencies": [
+                {
+                    "task": "loop",
+                    "type": "single"
+                }
+            ]
+        },
+        {
+            "name": "End loop",
+            "operator": "oph_endfor",
+            "arguments": [],
+            "dependencies": [
+                {
+                    "task": "import",
+                    "type": "all"
+                }
+            ]
+        },
+        {
+            "name": "merging",
+            "operator": "oph_mergecubes2",
+            "arguments": ["dim=new_dim"],
+            "dependencies": [
+                {
+                    "task": "End loop",
+                    "type": "all",
+                    "argument": "cubes"
+                }
+            ]
+        },
+	{
+            "name": "loop_reduce",
+            "operator": "oph_for",
+            "arguments": [ "name=index2", "values=avg|min|max|var|std", "parallel=yes" ],
+            "dependencies": [ { "task":"merging", "type": "single" } ]
+	},
+        {
+            "name": "reducing",
+            "operator": "oph_reduce2",
+            "arguments": [
+                "operation=@index2",
+                "dim=new_dim"
+            ],
+            "dependencies": [
+                {
+                    "task": "loop_reduce",
+                    "type": "single"
+                }
+            ]
+        },
+        {
+            "name": "export",
+            "operator": "oph_exportnc2",
+            "arguments": [
+                "output_name=@index2"
+            ],
+            "dependencies": [
+                {
+                    "task": "reducing",
+                    "type": "single"
+                }
+            ]
+        },
+        {
+            "name": "export_path",
+            "operator": "oph_set",
+            "arguments": [
+                "name=mia_var",
+                "value=Output File"
+            ],
+            "dependencies": [
+                {
+                    "task": "export",
+                    "type": "single"
+                }
+            ]
+        },
+        {
+            "name": "Post",
+            "operator": "oph_script",
+            "arguments": [
+                "script=$2/precip_trend_analysis_ensemble.sh",
+                "args=@mia_var"
+            ],
+            "dependencies": [
+                {
+                    "task": "export_path"
+                } 
+            ]
+        },
+        {
+            "name": "End loop_reduce",
+            "operator": "oph_endfor",
+            "arguments": [ ],
+            "dependencies": [ { "task":"Post", "type": "all"} ]
+        },
+        {
+            "name": "Delete all cubes",
+            "operator": "oph_delete",
+            "arguments": [
+                "cube=[container=ensemble]"
+            ],
+            "dependencies": [
+                {
+                    "task": "End loop_reduce"
+                }
+            ],
+            "on_error": "skip"
+        },
+        {
+            "name": "Delete container",
+            "operator": "oph_deletecontainer",
+            "arguments": [
+                "container=ensemble",
+                "hidden=no",
+                "delete_type=physical"
+            ],
+            "dependencies": [
+                {
+                    "task": "Delete all cubes"
+                }
+            ],
+            "on_error": "skip"
+        }
+    ]
+}
+            

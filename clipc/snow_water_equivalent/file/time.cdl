@@ -1,0 +1,22 @@
+netcdf time {
+dimensions:
+	time = UNLIMITED ; // (1 currently)
+	bnds = 2 ;
+variables:
+	double time(time) ;
+		time:standard_name = "time" ;
+		time:long_name = "time" ;
+		time:units = "days since 1949-12-01 00:00:00" ;
+		time:calendar = "standard" ;
+		time:bounds = "time_bnds" ;
+		time:axis = "T" ;
+	double time_bnds(time, bnds) ;
+		time_bnds:units = "days since 1949-12-01 00:00:00" ;
+		time_bnds:calendar = "standard" ;
+data:
+
+ time = 16147 ;
+
+ time_bnds =
+  10896, 21397 ;
+}

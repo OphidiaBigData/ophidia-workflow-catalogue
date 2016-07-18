@@ -1,0 +1,249 @@
+{
+	"name": "CLIPC_SST", 
+	"author": "CMCC",
+	"abstract": "This workflow evaluates Monthly Mean SST. It works on a datacube (SST variable): use the $1 as cubeid input parameter, $2 as nc export path and $3 as base path for bash scripts. Each fragment will consist of 3600x7200 rows and each row of 365 elements. lat and lon will be explicit dimensions while time will be an implicit dimension. This workflow will perform a data reduction for computing time averages",
+	"exec_mode": "async",
+	"cwd": "/",
+	"ncores": "7",
+	"on_exit": "oph_delete",
+	"tasks":
+	[
+		{
+			"name": "Pre-process",
+			"operator": "oph_apply",
+			"arguments":
+			[
+				"query=oph_predicate('oph_float','oph_float',oph_predicate('oph_short','oph_float',measure,'x-4500','>0','NAN','x'),'x+300','<0','NAN','x')",
+				"description=Pre-processed data",
+				"cube=$1"
+			]
+		},
+		{
+			"name": "Time reduction",
+			"operator": "oph_reduce2",
+			"arguments":
+			[
+				"operation=avg",
+				"dim=time",
+				"concept_level=M",
+				"description=Monthly Averages"
+			],
+			"dependencies": [ { "task": "Pre-process", "type": "single" } ]
+		},
+		{
+			"name": "Delete pre-processed data",
+			"operator": "oph_delete",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Pre-process", "type": "single" },
+				{ "task": "Time reduction" }
+			]
+		},
+		{
+			"name": "Post-process1",
+			"operator": "oph_apply",
+			"arguments":
+			[
+				"query=oph_predicate('oph_float','oph_short',measure,'x','NAN','-32768','x')",
+				"description=Post-processed data1"
+			],
+			"dependencies": [
+				{ "task": "Time reduction", "type": "single" },
+				{ "task": "Delete pre-processed data" }
+			]
+		},
+		{
+			"name": "Export Monthly Averages",
+			"operator": "oph_exportnc2",
+			"arguments": [
+				"output_path=$2",
+				"output_name=SST_ESA-CCI-SST_1991-2010_mon"
+			],
+			"dependencies": [ { "task": "Post-process1", "type": "single" } ]
+		},
+		{
+			"name": "Post-export-script1",
+			"operator": "oph_script",
+			"arguments": [
+				"script=$3/postprocess.sh",
+				"args=$2|SST_ESA-CCI-SST_1991-2010_mon.nc",
+				"ncores=1"
+			],
+			"dependencies": [
+				{ "task": "Export Monthly Averages" }
+			]
+		},
+		{
+			"name": "Post-export-script1_2",
+			"operator": "oph_script",
+			"arguments": [
+				"script=$3/postproc_attribute.sh",
+				"args=$2|SST_ESA-CCI-SST_1991-2010_mon.nc",
+				"ncores=1"
+			],
+			"dependencies": [
+				{ "task": "Post-export-script1" }
+			]
+		},
+		{
+			"name": "Loop on months",
+			"operator": "oph_for",
+			"arguments": [
+				"name=index",
+				"counter=1:12",
+				"values=Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug",
+				"parallel=yes"
+			],
+			"dependencies": [
+				{ "task": "Time reduction", "type": "single" },
+				{ "task": "Delete pre-processed data" }
+			]
+		},
+		{
+			"name": "Extract months",
+			"operator": "oph_subset",
+			"arguments": [
+				"subset_dims=time",
+				"subset_filter=&index:12:end",
+				"description=Data related to month @index"
+			],
+			"dependencies": [
+				{ "task": "Loop on months", "type": "single" }
+			]
+		},
+		{
+			"name": "Evaluate Long-term Averages",
+			"operator": "oph_reduce2",
+			"arguments": [
+				"operation=avg",
+				"dim=time",
+				"description=Long-term Average of data related to month @index"
+			],
+			"dependencies": [
+				{ "task": "Extract months", "type": "single" }
+			]
+		},
+		{
+			"name": "Post-process2",
+			"operator": "oph_apply",
+			"arguments":
+			[
+				"query=oph_predicate('oph_float','oph_short',measure,'x','NAN','-32768','x')",
+				"description=Post-processed data2 related to month @index"
+			],
+			"dependencies": [ { "task": "Evaluate Long-term Averages", "type": "single" } ]
+		},
+		{
+			"name": "Export Climatology Average",
+			"operator": "oph_exportnc2",
+			"arguments": [
+				"output_path=$2",
+				"output_name=@{index}_SST_ESA-CCI-SST_1991-2010_mon"
+			],
+			"dependencies": [ { "task": "Post-process2", "type": "single" } ]
+		},
+		{
+			"name": "Post-export-script2",
+			"operator": "oph_script",
+			"arguments": [
+				"script=$3/postprocess.sh",
+				"args=$2|@{index}_SST_ESA-CCI-SST_1991-2010_mon.nc",
+				"ncores=1"
+			],
+			"dependencies": [
+				{ "task": "Export Climatology Average" }
+			]
+		},
+		{
+			"name": "Post-export-script2_2",
+			"operator": "oph_script",
+			"arguments": [
+				"script=$3/postproc_attribute.sh",
+				"args=$2|@{index}_SST_ESA-CCI-SST_1991-2010_mon.nc",
+				"ncores=1"
+			],
+			"dependencies": [
+				{ "task": "Post-export-script2" }
+			]
+		},
+		{
+			"name": "End loop",
+			"operator": "oph_endfor",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Post-export-script2_2" }
+			]
+		},
+		{
+			"name": "Evaluate Long-term Average",
+			"operator": "oph_apply",
+			"arguments": [
+				"query=oph_extend(oph_reduce(measure,'oph_avg'),232)",
+				"measure_type=auto",
+				"description=Long-term Average"
+			],
+			"dependencies": [
+				{ "task": "Time reduction", "type": "single" },
+				{ "task": "Delete pre-processed data" }
+			]
+		},
+		{
+			"name": "Evaluate Anomaly",
+			"operator": "oph_intercube",
+			"arguments": [
+				"output_measure=anomaly_sst",
+                		"operation=sub",
+				"description=Long-term Average"
+			],
+			"dependencies": [
+				{ "task": "Time reduction", "type": "single" },
+				{ "task": "Delete pre-processed data" },
+				{ "task": "Evaluate Long-term Average", "type": "single", "argument":"cube2" }
+			]
+		},
+		{
+			"name": "Post-process3",
+			"operator": "oph_apply",
+			"arguments":
+			[
+				"query=oph_predicate('oph_float','oph_short',measure,'x','NAN','-32768','x')",
+				"description=Post-processed data3"
+			],
+			"dependencies": [ { "task": "Evaluate Anomaly", "type": "single" } ]
+		},
+		{
+			"name": "Export Monthly Anomaly",
+			"operator": "oph_exportnc2",
+			"arguments": [
+				"output_path=$2",
+				"output_name=ANOMALY_ESA-CCI-SST_1991-2010_mon"
+			],
+			"dependencies": [ { "task": "Post-process3", "type": "single" } ]
+		},
+		{
+			"name": "Post-export-script3",
+			"operator": "oph_script",
+			"arguments": [
+				"script=$3/postprocess_anomaly.sh",
+				"args=$2|ANOMALY_ESA-CCI-SST_1991-2010_mon.nc",
+				"ncores=1"
+			],
+			"dependencies": [
+				{ "task": "Export Monthly Anomaly" }
+			]
+		},
+		{
+			"name": "Post-export-script3_2",
+			"operator": "oph_script",
+			"arguments": [
+				"script=$3/postproc_attribute.sh",
+				"args=$2|ANOMALY_ESA-CCI-SST_1991-2010_mon.nc",
+				"ncores=1"
+			],
+			"dependencies": [
+				{ "task": "Post-export-script3" }
+			]
+		}
+	]
+}
+
