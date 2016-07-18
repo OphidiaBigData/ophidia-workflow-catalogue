@@ -1,0 +1,190 @@
+{
+	"name": "Test selection statement",
+	"author": "CMCC",
+	"abstract": "Workflow with a selection statement. The workflow requires three parameters: $1 is the path to file tos_O1_2001-2002.nc to be imported, $2 and $3 are the conditions for selections IF2 and ELSEIF2.",
+	"exec_mode": "sync",
+	"ncores": "1",
+	"on_exit": "oph_delete",
+	"tasks":
+	[
+		{
+			"name": "CreateContainer",
+			"operator": "oph_createcontainer",
+			"arguments":
+			[
+				"container=jenkins",
+				"dim=lat|lon|time",
+				"hierarchy=oph_base|oph_base|oph_time",
+				"vocabulary=CF",
+				"ncores=1"
+			],
+			"on_error": "skip"
+		},
+		{
+			"name": "Import",
+			"operator": "oph_importnc3",
+			"arguments":
+			[
+				"src_path=$1/tos_O1_2001-2002.nc",
+				"measure=tos",
+				"imp_concept_level=M",
+				"imp_dim=time",
+				"container=jenkins"
+			],
+			"dependencies":
+			[
+				{ "task": "CreateContainer" }
+			]
+		},
+		{
+			"name": "FOR",
+			"operator": "oph_for",
+			"arguments":
+			[
+				"name=value",
+				"values=1|0"
+			],
+			"dependencies":
+			[
+				{ "task":"Import" }
+			]
+		},
+		{
+			"name": "IF",
+			"operator": "oph_if",
+			"arguments":
+			[
+				"condition=@value"
+			],
+			"dependencies":
+			[
+				{ "task":"Import", "type":"single" },
+				{ "task":"FOR" }
+			]
+		},
+		{
+			"name": "Cubeschema",
+			"operator": "oph_cubeschema",
+			"arguments":
+			[
+				"level=0"
+			],
+			"dependencies":
+			[
+				{ "task":"IF", "type":"single" }
+			]
+		},
+		{
+			"name": "ELSE",
+			"operator": "oph_else",
+			"arguments": [ ],
+			"dependencies":
+			[
+				{ "task":"IF", "type":"single" }
+			]
+		},
+		{
+			"name": "IF2",
+			"operator": "oph_if",
+			"arguments": [ "condition=$2" ],
+			"dependencies":
+			[
+				{ "task":"ELSE", "type":"single" }
+			]
+		},
+		{
+			"name": "Cubeschema2",
+			"operator": "oph_cubeschema",
+			"arguments":
+			[
+				"level=1"
+			],
+			"dependencies":
+			[
+				{ "task":"IF2", "type":"single" }
+			]
+		},
+		{
+			"name": "ELSEIF2",
+			"operator": "oph_elseif",
+			"arguments": [ "condition=$3" ],
+			"dependencies":
+			[
+				{ "task":"IF2", "type":"single" }
+			]
+		},
+		{
+			"name": "Cubeschema3",
+			"operator": "oph_cubeschema",
+			"arguments":
+			[
+				"level=2"
+			],
+			"dependencies":
+			[
+				{ "task":"ELSEIF2", "type":"single" }
+			]
+		},
+		{
+			"name": "ELSE2",
+			"operator": "oph_else",
+			"arguments": [ ],
+			"dependencies":
+			[
+				{ "task":"ELSEIF2", "type":"single" }
+			]
+		},
+		{
+			"name": "Cubeschema4",
+			"operator": "oph_cubeschema",
+			"arguments":
+			[
+				"level=1",
+				"dim=time"
+			],
+			"dependencies":
+			[
+				{ "task":"ELSE2", "type":"single" }
+			]
+		},
+		{
+			"name": "ENDIF2",
+			"operator": "oph_endif",
+			"arguments": [ ],
+			"dependencies":
+			[
+				{ "task":"Cubeschema2", "type":"single" },
+				{ "task":"Cubeschema3", "type":"single" },
+				{ "task":"Cubeschema4", "type":"single" }
+			]
+		},
+		{
+			"name": "ENDIF",
+			"operator": "oph_endif",
+			"arguments": [ ],
+			"dependencies":
+			[
+				{ "task":"Cubeschema", "type":"single" },
+				{ "task":"ENDIF2", "type":"single" }
+			]
+		},
+		{
+			"name": "Cubeschema5",
+			"operator": "oph_cubeschema",
+			"arguments": [ ],
+			"dependencies":
+			[
+				{ "task":"ENDIF", "type":"single" }
+			]
+		},
+		{
+			"name": "ENDFOR",
+			"operator": "oph_endfor",
+			"arguments": [ ],
+			"dependencies":
+			[
+				{ "task":"Cubeschema5" }
+			]
+		}
+	]
+}

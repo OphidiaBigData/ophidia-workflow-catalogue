@@ -1,0 +1,97 @@
+{
+	"name": "Test parallel statement",
+	"author": "CMCC",
+	"abstract": "Workflow with a parallel statement. The workflow requires the parameter $1, i.e. the path to file tos_O1_2001-2002.nc to be imported.",
+	"exec_mode": "sync",
+	"ncores": "2",
+	"on_exit": "oph_delete",
+	"tasks":
+	[
+		{
+			"name": "CreateContainer",
+			"operator": "oph_createcontainer",
+			"arguments":
+			[
+				"container=jenkins",
+				"dim=lat|lon|time",
+				"hierarchy=oph_base|oph_base|oph_time",
+				"vocabulary=CF",
+				"ncores=1"
+			],
+			"on_error": "skip"
+		},
+		{
+			"name": "Import",
+			"operator": "oph_importnc3",
+			"arguments":
+			[
+				"src_path=$1/tos_O1_2001-2002.nc",
+				"measure=tos",
+				"imp_concept_level=M",
+				"imp_dim=time",
+				"container=jenkins"
+			],
+			"dependencies":
+			[
+				{ "task": "CreateContainer" }
+			]
+		},
+		{
+			"name": "Begin loop on months",
+			"operator": "oph_for",
+			"arguments":
+			[
+				"name=index",
+				"counter=1:4",
+				"parallel=yes"
+			],
+			"dependencies":
+			[
+				{ "task": "Import" }
+			]
+		},
+		{
+			"name": "Extract a month",
+			"operator": "oph_subset",
+			"arguments":
+			[
+				"subset_dims=time",
+				"subset_filter=&{index}"
+			],
+			"dependencies":
+			[
+				{ "task": "Import", "type": "single" },
+				{ "task": "Begin loop on months" }
+			]
+		},
+		{
+			"name": "Spatial reduction",
+			"operator": "oph_aggregate",
+			"arguments": [ "operation=avg" ],
+			"dependencies":
+			[
+				{ "task": "Extract a month", "type": "single" }
+			]
+		},
+		{
+			"name": "End loop on months",
+			"operator": "oph_endfor",
+			"arguments": [ ],
+			"dependencies":
+			[
+				{ "task": "Spatial reduction" }
+			]
+		},
+		{
+			"name": "Deletion",
+			"operator": "oph_delete",
+			"arguments": [ ],
+			"dependencies":
+			[
+				{ "task": "Import", "type": "single" },
+				{ "task": "End loop on months" }
+			]
+		}
+	]
+}
+
