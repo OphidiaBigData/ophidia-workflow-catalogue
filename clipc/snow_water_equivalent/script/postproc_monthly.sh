@@ -3,13 +3,15 @@
 # CLIPC - ESA-GlobSnow
 # Long term monthly average
 
-if [ $# -ne 2 ]; then
+if [ $# -ne 3 ]; then
 	exit -1
 fi
 
 filepath=$1;	# Path of the file to modify
 filename=$2;	# Name of the file to modify
-cwd='.'		#Set this path on the time.nc filepath, usually the same of this script
+month=$3;	# Prefix of the month
+
+cwd='./time'	#Set this path on the time.nc filepath, usually the same of this script
 
 # Copy lat/lon,lambert_azimuthal_equal_area variables from source
 ncks -h -A -C -v lat,lon,lambert_azimuthal_equal_area /data/repository/CLIPC/ESA-GlobSnow-all/source/ESA-GlobSnow-L3B-SWE-monthly-200802-fv2.0.nc $filepath/$filename
@@ -18,7 +20,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Copy time,time_bnds from a pre-generated time.nc file
-ncks -h -A -C -v time,time_bnds $cwd/time.nc $filepath/$filename
+ncks -h -A -C -v time,time_bnds $cwd/time_$month.nc $filepath/$filename
 if [ $? -ne 0 ]; then
         exit 2
 fi

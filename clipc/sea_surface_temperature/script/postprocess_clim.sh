@@ -21,34 +21,38 @@ ncatted -h -a geospatial_vertical_max,global,o,f,-0.2 $filepath/$filename
 if [ $? -ne 0 ]; then
         exit 3
 fi
-ncatted -h -a _FillValue,monthly_anomaly,c,s,-32768 $filepath/$filename
+ncatted -h -a _FillValue,monthly_clim_mean_sst,o,s,-32768 $filepath/$filename
 if [ $? -ne 0 ]; then
         exit 4
 fi
-ncatted -h -a missing_value,monthly_anomaly,c,s,-32768 $filepath/$filename
+ncatted -h -a missing_value,monthly_clim_mean_sst,o,s,-32768 $filepath/$filename
 if [ $? -ne 0 ]; then
         exit 5
 fi
-ncatted -h -a standard_name,monthly_anomaly,c,c,"monthly sst anomaly" $filepath/$filename
+ncatted -h -a standard_name,monthly_clim_mean_sst,o,c,"monthly climatology mean sst" $filepath/$filename
 if [ $? -ne 0 ]; then
         exit 6
 fi
-ncatted -h -a long_name,monthly_anomaly,c,c,"monthly sea surface temperature anomaly" $filepath/$filename
+ncatted -h -a long_name,monthly_clim_mean_sst,o,c,"monthly climatology mean sea surface temperature" $filepath/$filename
 if [ $? -ne 0 ]; then
         exit 7
 fi
-ncatted -h -a units,monthly_anomaly,c,c,"degrees C" $filepath/$filename
+ncatted -h -a units,monthly_clim_mean_sst,o,c,"degrees C" $filepath/$filename
 if [ $? -ne 0 ]; then
         exit 8
 fi
-ncatted -h -a depth,monthly_anomaly,c,c,"20 cm" $filepath/$filename
+ncatted -h -a depth,monthly_clim_mean_sst,c,c,"20 cm" $filepath/$filename
 if [ $? -ne 0 ]; then
         exit 9
 fi
-ncatted -h -a scale_factor,monthly_anomaly,c,f,0.01 $filepath/$filename
+ncatted -h -a scale_factor,monthly_clim_mean_sst,c,f,0.01 $filepath/$filename
 if [ $? -ne 0 ]; then
         exit 10
 fi
 
-exit 0
+ncatted -h -a add_offset,monthly_clim_mean_sst,d,s,273 $filepath/$filename
+if [ $? -ne 0 ]; then
+        exit 20
+fi
 
+exit 0

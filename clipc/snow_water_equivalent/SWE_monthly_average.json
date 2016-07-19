@@ -108,7 +108,7 @@
             "operator": "oph_script",
             "arguments": [
                 "script=$4/postproc_monthly.sh",
-		"args=$2|SWE_AVG_@{index}_$3.nc",
+		"args=$2|SWE_AVG_@{index}_$3.nc|@{index}",
 		"ncores=1"
             ],
             "dependencies": [

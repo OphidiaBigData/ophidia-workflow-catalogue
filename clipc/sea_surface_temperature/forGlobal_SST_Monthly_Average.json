@@ -45,7 +45,8 @@
 			"arguments":
 			[
 				"query=oph_predicate('oph_float','oph_short',measure,'x','NAN','-32768','x')",
-				"description=Post-processed data1"
+				"description=Post-processed data1",
+				"measure=monthly_mean_sst"
 			],
 			"dependencies": [
 				{ "task": "Time reduction", "type": "single" },
@@ -65,7 +66,7 @@
 			"name": "Post-export-script1",
 			"operator": "oph_script",
 			"arguments": [
-				"script=$3/postprocess.sh",
+				"script=$3/postprocess_sst.sh",
 				"args=$2|SST_ESA-CCI-SST_1991-2010_mon.nc",
 				"ncores=1"
 			],
@@ -129,7 +130,8 @@
 			"arguments":
 			[
 				"query=oph_predicate('oph_float','oph_short',measure,'x','NAN','-32768','x')",
-				"description=Post-processed data2 related to month @index"
+				"description=Post-processed data2 related to month @index",
+				"measure=monthly_clim_mean_sst"
 			],
 			"dependencies": [ { "task": "Evaluate Long-term Averages", "type": "single" } ]
 		},
@@ -146,7 +148,7 @@
 			"name": "Post-export-script2",
 			"operator": "oph_script",
 			"arguments": [
-				"script=$3/postprocess.sh",
+				"script=$3/postprocess_clim.sh",
 				"args=$2|@{index}_SST_ESA-CCI-SST_1991-2010_mon.nc",
 				"ncores=1"
 			],
@@ -191,7 +193,7 @@
 			"name": "Evaluate Anomaly",
 			"operator": "oph_intercube",
 			"arguments": [
-				"output_measure=anomaly_sst",
+				"output_measure=monthly_anomaly",
                 		"operation=sub",
 				"description=Long-term Average"
 			],
