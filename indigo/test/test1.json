@@ -1,9 +1,9 @@
 {
 	"name": "Test iterative statement",
 	"author": "CMCC",
-	"abstract": "Workflow with a cycle. The workflow requires the parameter $1, i.e. the path to file tos_O1_2001-2002.nc to be imported.",
+	"abstract": "Workflow with a cycle. The workflow requires two parameters: $1 is ncores; $2 is the path to file tos_O1_2001-2002.nc to be imported.",
 	"exec_mode": "sync",
-	"ncores": "2",
+	"ncores": "$1",
 	"tasks":
 	[
 		{
@@ -11,7 +11,7 @@
 			"operator": "oph_createcontainer",
 			"arguments":
 			[
-				"container=jenkins",
+				"container=test",
 				"dim=lat|lon|time",
 				"hierarchy=oph_base|oph_base|oph_time",
 				"vocabulary=CF",
@@ -24,11 +24,11 @@
 			"operator": "oph_importnc3",
 			"arguments":
 			[
-				"src_path=$1/tos_O1_2001-2002.nc",
+				"src_path=$2/tos_O1_2001-2002.nc",
 				"measure=tos",
 				"imp_concept_level=M",
 				"imp_dim=time",
-				"container=jenkins"
+				"container=test"
 			],
 			"dependencies":
 			[
@@ -97,7 +97,7 @@
 			"operator": "oph_deletecontainer",
 			"arguments":
 			[
-				"container=jenkins",
+				"container=test",
 				"delete_type=physical",
 				"hidden=no",
 				"vocabulary=CF",

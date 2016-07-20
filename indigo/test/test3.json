@@ -1,9 +1,9 @@
 {
 	"name": "Test selection statement",
 	"author": "CMCC",
-	"abstract": "Workflow with a selection statement. The workflow requires three parameters: $1 is the path to file tos_O1_2001-2002.nc to be imported, $2 is the condition for selection IF2.",
+	"abstract": "Workflow with a selection statement. The workflow requires three parameters: $1 is ncores; $2 is the path to file tos_O1_2001-2002.nc to be imported, $3 is the condition for selection IF2.",
 	"exec_mode": "sync",
-	"ncores": "1",
+	"ncores": "$1",
 	"on_exit": "oph_delete",
 	"tasks":
 	[
@@ -12,7 +12,7 @@
 			"operator": "oph_createcontainer",
 			"arguments":
 			[
-				"container=jenkins",
+				"container=test",
 				"dim=lat|lon|time",
 				"hierarchy=oph_base|oph_base|oph_time",
 				"vocabulary=CF",
@@ -25,11 +25,11 @@
 			"operator": "oph_importnc3",
 			"arguments":
 			[
-				"src_path=$1/tos_O1_2001-2002.nc",
+				"src_path=$2/tos_O1_2001-2002.nc",
 				"measure=tos",
 				"imp_concept_level=M",
 				"imp_dim=time",
-				"container=jenkins"
+				"container=test"
 			],
 			"dependencies":
 			[
@@ -86,7 +86,7 @@
 		{
 			"name": "IF2",
 			"operator": "oph_if",
-			"arguments": [ "condition=$2" ],
+			"arguments": [ "condition=$3" ],
 			"dependencies":
 			[
 				{ "task":"ELSE", "type":"single" }
