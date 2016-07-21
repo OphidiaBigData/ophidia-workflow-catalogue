@@ -1,7 +1,7 @@
 {
 	"name": "Test selection statement",
 	"author": "CMCC",
-	"abstract": "Workflow with a selection statement. The workflow requires four parameters: $1 is ncores, $2 is the path to file tos_O1_2001-2002.nc to be imported, $3 and $4 are the conditions for selections IF2 and ELSEIF2.",
+	"abstract": "Workflow with a selection statement within an iterative block. The workflow requires four parameters: $1 is ncores, $2 is the path to file tos_O1_2001-2002.nc to be imported, $3 and $4 are the conditions for selections IF2 and ELSEIF2.",
 	"exec_mode": "sync",
 	"ncores": "$1",
 	"on_exit": "oph_delete",
