@@ -1,7 +1,7 @@
 {
 	"name": "Test parallel statement",
 	"author": "CMCC",
-	"abstract": "Workflow with a parallel statement. The workflow requires two parameters: $1 is ncores; $2 is the path to file tos_O1_2001-2002.nc to be imported.",
+	"abstract": "Workflow with a parallel statement. The workflow requires three parameters: $1 is ncores; $2 is the path to file to be imported (with dimensions lat|lon|time), $3 is the related variable.",
 	"exec_mode": "sync",
 	"ncores": "$1",
 	"on_exit": "oph_delete",
@@ -25,8 +25,8 @@
 			"operator": "oph_importnc3",
 			"arguments":
 			[
-				"src_path=$2/tos_O1_2001-2002.nc",
-				"measure=tos",
+				"src_path=$2",
+				"measure=$3",
 				"imp_concept_level=M",
 				"imp_dim=time",
 				"container=test"

@@ -1,7 +1,7 @@
 {
 	"name": "Test selection statement",
 	"author": "CMCC",
-	"abstract": "Workflow with a selection statement within an iterative block. The workflow requires four parameters: $1 is ncores, $2 is the path to file tos_O1_2001-2002.nc to be imported, $3 and $4 are the conditions for selections IF2 and ELSEIF2.",
+	"abstract": "Workflow with a selection statement within an iterative block. The workflow requires five parameters: $1 is ncores, $2 is the path to file to be imported (with dimensions lat|lon|time), $3 is the related variable, $4 and $5 are the conditions for selections IF2 and ELSEIF2.",
 	"exec_mode": "sync",
 	"ncores": "$1",
 	"on_exit": "oph_delete",
@@ -25,8 +25,8 @@
 			"operator": "oph_importnc3",
 			"arguments":
 			[
-				"src_path=$2/tos_O1_2001-2002.nc",
-				"measure=tos",
+				"src_path=$2",
+				"measure=$3",
 				"imp_concept_level=M",
 				"imp_dim=time",
 				"container=test"
@@ -86,7 +86,7 @@
 		{
 			"name": "IF2",
 			"operator": "oph_if",
-			"arguments": [ "condition=$3" ],
+			"arguments": [ "condition=$4" ],
 			"dependencies":
 			[
 				{ "task":"ELSE", "type":"single" }
@@ -107,7 +107,7 @@
 		{
 			"name": "ELSEIF2",
 			"operator": "oph_elseif",
-			"arguments": [ "condition=$4" ],
+			"arguments": [ "condition=$5" ],
 			"dependencies":
 			[
 				{ "task":"IF2", "type":"single" }

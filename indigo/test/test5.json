@@ -1,7 +1,7 @@
 {
 	"name": "Test selection statement",
 	"author": "CMCC",
-	"abstract": "Workflow with an iterative statement within a selection block. The workflow requires four parameters: $1 is ncores, $2 is the path to file tos_O1_2001-2002.nc to be imported, $3 is the condition for selection block, $4 is the of parallel flag (i.e. 'yes' or 'no')",
+	"abstract": "Workflow with an iterative statement within a selection block. The workflow requires five parameters: $1 is ncores, $2 is the path to file to be imported (with dimensions lat|lon|time), $3 is the related variable, $4 is the condition for selection block, $5 is the of parallel flag (i.e. 'yes' or 'no')",
 	"exec_mode": "sync",
 	"ncores": "$1",
 	"on_exit": "oph_delete",
@@ -25,8 +25,8 @@
 			"operator": "oph_importnc3",
 			"arguments":
 			[
-				"src_path=$2/tos_O1_2001-2002.nc",
-				"measure=tos",
+				"src_path=$2",
+				"measure=$3",
 				"imp_concept_level=M",
 				"imp_dim=time",
 				"container=test"
@@ -39,7 +39,7 @@
 		{
 			"name": "IF",
 			"operator": "oph_if",
-			"arguments": [ "condition=$3" ],
+			"arguments": [ "condition=$4" ],
 			"dependencies":
 			[
 				{ "task":"Import", "type":"single" }
@@ -92,7 +92,7 @@
 			[
 				"name=index",
 				"values=oph_div_array|oph_sub_array",
-				"parallel=$4"
+				"parallel=$5"
 			],
 			"dependencies":
 			[
