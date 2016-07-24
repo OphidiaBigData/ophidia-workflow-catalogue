@@ -3,6 +3,8 @@
 # Author: CMCC Foundation
 # Creation date: 02/11/2015
 
+# This script assumes UV-CDAT environment is called 'ophidia-nox'
+
 WorkDir=$1
 InFile=$OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/$2
 OutFile=$OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/precip_trend_analysis
@@ -16,15 +18,17 @@ if [ "$NewGrid" != "" ]; then
 	mv $tmp $InFile
 fi
 
-# Create the map
-ncl "infile=\"$InFile\"" "outfile=\"$OutFile\"" $WorkDir/precip_trend_analysis.ncl
-if [ $? -ne 0 ]; then
-	exit 1
-fi
-
 # Publish output data using OPeNDAP
 mkdir -p $BasePath/$OPH_SCRIPT_SESSION_CODE/$OPH_SCRIPT_WORKFLOW_ID
 cp $InFile $BasePath/$OPH_SCRIPT_SESSION_CODE/$OPH_SCRIPT_WORKFLOW_ID/
+
+# Create and publish NCL map
+ncl "infile=\"$InFile\"" "outfile=\"$OutFile\"" $WorkDir/precip_trend_analysis.ncl &
+
+# Create and publish UV-CDAT map
+source activate ophidia-nox
+python $WorkDir/precip_trend_analysis.py $WorkDir $OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/
+source deactivate
 
 exit 0
 
