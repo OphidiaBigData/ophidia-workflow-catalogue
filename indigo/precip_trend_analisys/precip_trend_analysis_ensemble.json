@@ -1,7 +1,7 @@
 {
     "name": "Ensemble analysis related to precipitation trend analysis",
     "author": "CMCC",
-    "abstract": "Usage: /path/precip_trend_analysis_ensemble.json 2 file1.nc|file2.nc pathscript",
+    "abstract": "Usage: /path/precip_trend_analysis_ensemble.json file1.nc|file2.nc pathscript. In particular, ${1} is the list of (OPeNDAP URLs to) NC files to be analyzed, ${2} is the path to bash scripts (work directory),
     "exec_mode": "sync",
     "ncores": "1",
     "on_exit":"oph_delete",
@@ -142,7 +142,7 @@
             "name": "Post",
             "operator": "oph_script",
             "arguments": [
-                "script=$2/precip_trend_analysis_ensemble.sh",
+                "script=${2}/precip_trend_analysis_ensemble.sh",
                 "args=@mia_var"
             ],
             "dependencies": [
