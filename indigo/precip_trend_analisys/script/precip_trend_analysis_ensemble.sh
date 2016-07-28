@@ -7,15 +7,11 @@
 
 WorkDir=$1
 InFile=$OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/${2}.nc
-OutFile=$OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/$2
 BasePath=/data/repository/INDIGO/precip_trend_output
 
 # Publish output data using OPeNDAP
 mkdir -p $BasePath/$OPH_SCRIPT_SESSION_CODE/$OPH_SCRIPT_WORKFLOW_ID
 cp $InFile $BasePath/$OPH_SCRIPT_SESSION_CODE/$OPH_SCRIPT_WORKFLOW_ID/ 2>&1 > /dev/null &
-
-# Create and publish NCL map
-ncl "infile=\"$InFile\"" "outfile=\"$OutFile\"" $WorkDir/precip_trend_analysis.ncl 2>&1 > /dev/null &
 
 # Create and publish UV-CDAT map
 source activate ophidia-nox

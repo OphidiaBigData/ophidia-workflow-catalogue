@@ -14,7 +14,7 @@ ViridisScript = "/".join([WorkDir, "viridis.json"])
 
 DataDir = sys.argv[2]
 InFile = "/".join([DataDir, "precip_trend_analysis.nc"])
-OutFile = "/".join([DataDir, "precip_trend_analysis2.png"])
+OutFile = "/".join([DataDir, "precip_trend_analysis.png"])
 
 # Process file
 

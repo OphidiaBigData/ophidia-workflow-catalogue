@@ -16,7 +16,7 @@ DataDir = sys.argv[2]
 FileName = "/".join([DataDir, sys.argv[3]])
 
 InFile = ".".join([FileName, "nc"])
-OutFile = "2.".join([FileName, "png"])
+OutFile = ".".join([FileName, "png"])
 
 # Process file
 
