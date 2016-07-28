@@ -3,21 +3,24 @@
 # Author: CMCC Foundation
 # Creation date: 02/11/2015
 
-ophidia_server_prefix=/var/www/html/ophidia/sessions
-opendap_prefix=/data/repository/INDIGO/precip_trend_output
+# This script assumes UV-CDAT environment is called 'ophidia-nox'
 
-cube=$1		
-filename=${cube##*/}	
-filename_without_extension=${filename%.*}
-path_without_filename=${cube%/*}
-id_job=${path_without_filename##*/}
-temp2=${path_without_filename%/*}
-id_workflow=${temp2##*/}
-temp3=${temp2%/*}
-temp4=${temp3%/*}
-temp5=${temp4%/*}
-id_session=${temp5##*/}
+WorkDir=$1
+InFile=$OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/${2}.nc
+OutFile=$OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/$2
+BasePath=/data/repository/INDIGO/precip_trend_output
 
-mkdir -p $opendap_prefix/$id_session/$id_workflow
-cp $ophidia_server_prefix/$id_session/export/nc/$id_workflow/$id_job/$filename $opendap_prefix/$id_session/$id_workflow/
+# Publish output data using OPeNDAP
+mkdir -p $BasePath/$OPH_SCRIPT_SESSION_CODE/$OPH_SCRIPT_WORKFLOW_ID
+cp $InFile $BasePath/$OPH_SCRIPT_SESSION_CODE/$OPH_SCRIPT_WORKFLOW_ID/ 2>&1 > /dev/null &
+
+# Create and publish NCL map
+ncl "infile=\"$InFile\"" "outfile=\"$OutFile\"" $WorkDir/precip_trend_analysis.ncl 2>&1 > /dev/null &
+
+# Create and publish UV-CDAT map
+source activate ophidia-nox
+python $WorkDir/precip_trend_analysis_ensemble.py $WorkDir $OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/ $2
+source deactivate
+
+exit 0
 
