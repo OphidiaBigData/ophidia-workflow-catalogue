@@ -3,11 +3,14 @@
 # Author: CMCC Foundation
 # Creation date: 02/11/2015
 
-# This script assumes UV-CDAT environment is called 'ophidia-nox'
+# This script assumes that UV-CDAT environment is called 'ophidia-nox'
+# This script assumes that BasePath to store output file for OPeNDAP is
 
+BasePath=/data/repository/INDIGO/precip_trend_input
+
+# Input parameters
 WorkDir=$1
 InFile=$OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/$2
-BasePath=/data/repository/INDIGO/precip_trend_input
 NewGrid=$3
 
 # Bilinear regridding
