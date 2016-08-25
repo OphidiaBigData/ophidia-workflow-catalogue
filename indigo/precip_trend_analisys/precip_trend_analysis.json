@@ -1,7 +1,7 @@
 {
     "name": "precip_trend_analysis",
     "author": "CMCC Foundation",
-    "abstract": "Workflow for the analysis of precipitation trends related to different scenarios. ${1} is ncores, ${2} is the model (e.g. CMCC-CM), ${3} is the scenario (e.g. rcp85), ${4} is the frequency (e.g. day), ${5} is the percentile (e.g. 0.9), ${6} is the past time subset (e.g. 1976_2006), ${7} is the future time subset (e.g. 2071_2101), ${8} is the geographic subset (e.g. 30:45|0:40), ${9} is the path to data repository (e.g. /data/repository), ${10} is the path to bash scripts (work directory), ${11} is the grid of output map using the format r<lon>x<lat> (e.g. r360x180), i.e. a global regular lon/lat grid (this parameter is optional and by default the lon/lat grid of input file is adopted)",
+    "abstract": "Workflow for the analysis of precipitation trends related to different scenarios. ${1} is ncores, ${2} is the model (e.g. CMCC-CM), ${3} is the scenario (e.g. rcp85), ${4} is the frequency (e.g. day), ${5} is the percentile (e.g. 0.9), ${6} is the past time subset (e.g. 1976_2006), ${7} is the future time subset (e.g. 2071_2101), ${8} is the geographic subset (e.g. 30:45|0:40), ${9} is the grid of output map using the format r<lon>x<lat> (e.g. r360x180), i.e. a global regular lon/lat grid (this parameter is optional and by default the lon/lat grid of input file is adopted)",
     "exec_mode": "sync",
     "cwd": "/",
     "ncores": "${1}",
@@ -48,7 +48,7 @@
                 "exp_dim=lat|lon",
                 "imp_dim=time",
                 "measure=pr",
-                "src_path=${9}/${2}/historical/pr_${4}_${2}_historical_r1i1p1_19760101-20051231.nc",
+                "src_path=${2}/historical/pr_${4}_${2}_historical_r1i1p1_19760101-20051231.nc",
                 "compressed=no",
                 "exp_concept_level=c|c",
                 "filesystem=local",
@@ -137,7 +137,7 @@
                 "exp_dim=lat|lon",
                 "imp_dim=time",
                 "measure=pr",
-                "src_path=${9}/${2}/${3}/pr_${4}_${2}_${3}_r1i1p1_20700101-21001231.nc",
+                "src_path=${2}/${3}/pr_${4}_${2}_${3}_r1i1p1_20700101-21001231.nc",
                 "compressed=no",
                 "exp_concept_level=c|c",
                 "filesystem=local",
@@ -266,7 +266,7 @@
         {
             "name": "Create map",
             "operator": "oph_script",
-            "arguments": [ "script=${10}/precip_trend_analysis.sh", "args=${10} precip_trend_analysis.nc ${11}" ],
+            "arguments": [ "script=precip_trend_analysis", "args=precip_trend_analysis.nc ${8} ${9}" ],
             "dependencies": [{ "task": "Export" }]
         }
     ]

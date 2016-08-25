@@ -130,8 +130,8 @@
             "name": "Post",
             "operator": "oph_script",
             "arguments": [
-                "script=${2}/precip_trend_analysis_ensemble.sh",
-                "args=${2} @{index}"
+                "script=precip_trend_analysis_ensemble",
+                "args=@{index}"
             ],
             "dependencies": [
                 {
