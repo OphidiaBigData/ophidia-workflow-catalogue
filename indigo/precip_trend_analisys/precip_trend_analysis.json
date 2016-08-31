@@ -1,7 +1,7 @@
 {
     "name": "precip_trend_analysis",
     "author": "CMCC Foundation",
-    "abstract": "Workflow for the analysis of precipitation trends related to different scenarios. ${1} is ncores, ${2} is the model (e.g. CMCC-CM), ${3} is the scenario (e.g. rcp85), ${4} is the frequency (e.g. day), ${5} is the percentile (e.g. 0.9), ${6} is the past time subset (e.g. 1976_2006), ${7} is the future time subset (e.g. 2071_2101), ${8} is the geographic subset (e.g. 30:45|0:40), ${9} is the grid of output map using the format r<lon>x<lat> (e.g. r360x180), i.e. a global regular lon/lat grid (this parameter is optional and by default the lon/lat grid of input file is adopted)",
+    "abstract": "Workflow for the analysis of precipitation trends related to different scenarios. ${1} is ncores; ${2} is the model (e.g. CMCC-CM); ${3} is the scenario (e.g. rcp85); ${4} is the frequency (e.g. day); ${5} is the percentile (e.g. 0.9); ${6} is the past time subset (e.g. 1976_2006); ${7} is the future time subset (e.g. 2071_2101); ${8} is the geographic subset (e.g. 30:45|0:40); ${9} is the grid of output map using the format r<lon>x<lat> (e.g. r360x180), i.e. a global regular lon/lat grid (this parameter is optional and by default the lon/lat grid of input file is adopted); ${10} import type, set to '1' in case only subsetting data have to be imported (optional).",
     "exec_mode": "sync",
     "cwd": "/",
     "ncores": "${1}",
@@ -41,6 +41,14 @@
             "on_error": "skip"
         },
         {
+            "name": "Import Type Selection Historical",
+            "operator": "oph_if",
+            "arguments": [ "condition=${10}" ],
+            "dependencies": [
+                { "task": "Create Container Historical" }
+            ]
+        },
+        {
             "name": "Import Historical",
             "operator": "oph_importnc",
             "arguments": [
@@ -55,13 +63,49 @@
                 "imp_concept_level=d",
                 "ndb=1",
                 "ndbms=1",
-                "nfrag=${1}",
+                "nhost=1",
+                "import_metadata=yes",
+                "check_compliance=no",
+                "units=d",
+                "subset_dims=time|lat|lon",
+                "subset_filter=${6}|${8}",
+                "subset_type=coord"
+            ],
+            "dependencies": [
+                { "task": "Import Type Selection Historical" }
+            ]
+        },
+        {
+            "name": "Import without subsetting Historical",
+            "operator": "oph_else",
+            "arguments": [ ],
+            "dependencies": [
+                { "task": "Import Type Selection Historical" }
+            ]
+        },
+        {
+            "name": "Import Historical Only",
+            "operator": "oph_importnc",
+            "arguments": [
+                "container=historical",
+                "exp_dim=lat|lon",
+                "imp_dim=time",
+                "measure=pr",
+                "src_path=${2}/historical/pr_${4}_${2}_historical_r1i1p1_19760101-20051231.nc",
+                "compressed=no",
+                "exp_concept_level=c|c",
+                "filesystem=local",
+                "imp_concept_level=d",
+                "ndb=1",
+                "ndbms=1",
                 "nhost=1",
                 "import_metadata=yes",
                 "check_compliance=no",
                 "units=d"
             ],
-            "dependencies": [{"task": "Create Container Historical"}]
+            "dependencies": [
+                { "task": "Import without subsetting Historical" }
+            ]
         },
         {
             "name": "Subset Zone Historical",
@@ -70,10 +114,18 @@
                 "subset_dims=time|lat|lon",
                 "subset_filter=${6}|${8}"
             ],
-            "dependencies": [{
-                "task": "Import Historical",
-                "type": "single"
-            }]
+            "dependencies": [
+                { "task": "Import Historical Only", "type": "single" }
+            ]
+        },
+        {
+            "name": "End Import Type Selection Historical",
+            "operator": "oph_endif",
+            "arguments": [ ],
+            "dependencies": [
+                { "task": "Import Historical", "type": "single" },
+                { "task": "Subset Zone Historical", "type": "single" }
+            ]
         },
         {
             "name": "Subset JJA Historical",
@@ -82,10 +134,9 @@
                 "subset_dims=time",
                 "subset_filter=1976-06_1976-09,1977-06_1977-09,1978-06_1978-09,1979-06_1979-09,1980-06_1980-09,1981-06_1981-09,1982-06_1982-09,1983-06_1983-09,1984-06_1984-09,1985-06_1985-09,1986-06_1986-09,1987-06_1987-09,1988-06_1988-09,1989-06_1989-09,1990-06_1990-09,1991-06_1991-09,1992-06_1992-09,1993-06_1993-09,1994-06_1994-09,1995-06_1995-09,1996-06_1996-09,1997-06_1997-09,1998-06_1998-09,1999-06_1999-09,2000-06_2000-09,2001-06_2001-09,2002-06_2002-09,2003-06_2003-09,2004-06_2004-09,2005-06_2005-09"
             ],
-            "dependencies": [{
-                "task": "Subset Zone Historical",
-                "type": "single"
-            }]
+            "dependencies": [
+                { "task": "End Import Type Selection Historical", "type": "single" }
+            ]
         },
         {
             "name": "90th percentile JJA Historical",
@@ -96,10 +147,9 @@
 		"concept_level=y",
 		"order=${5}"
             ],
-            "dependencies": [{
-                "task": "Subset JJA Historical",
-                "type": "single"
-            }]
+            "dependencies": [
+                { "task": "Subset JJA Historical", "type": "single" }
+            ]
         },
         {
             "name": "Linear regression Historical",
@@ -108,10 +158,9 @@
             	"query=oph_gsl_fit_linear_coeff(measure)",
 		"measure_type=auto"
             ],
-            "dependencies": [{
-                "task": "90th percentile JJA Historical",
-                "type": "single"
-            }]
+            "dependencies": [
+                { "task": "90th percentile JJA Historical", "type": "single" }
+            ]
         },
         {
             "name": "Create Container Scenario",
@@ -130,6 +179,14 @@
             "on_error": "skip"
         },
         {
+            "name": "Import Type Selection Scenario",
+            "operator": "oph_if",
+            "arguments": [ "condition=${10}" ],
+            "dependencies": [
+                { "task": "Create Container Scenario" }
+            ]
+        },
+        {
             "name": "Import Scenario",
             "operator": "oph_importnc",
             "arguments": [
@@ -144,13 +201,49 @@
                 "imp_concept_level=d",
                 "ndb=1",
                 "ndbms=1",
-                "nfrag=${1}",
+                "nhost=1",
+                "import_metadata=yes",
+                "check_compliance=no",
+                "units=d",
+                "subset_dims=time|lat|lon",
+                "subset_filter=${7}|${8}",
+                "subset_type=coord"
+            ],
+            "dependencies": [
+                { "task": "Import Type Selection Scenario" }
+            ]
+        },
+        {
+            "name": "Import without subsetting Scenario",
+            "operator": "oph_else",
+            "arguments": [ ],
+            "dependencies": [
+                { "task": "Import Type Selection Scenario" }
+            ]
+        },
+        {
+            "name": "Import Scenario Only",
+            "operator": "oph_importnc",
+            "arguments": [
+                "container=scenario",
+                "exp_dim=lat|lon",
+                "imp_dim=time",
+                "measure=pr",
+                "src_path=${2}/${3}/pr_${4}_${2}_${3}_r1i1p1_20700101-21001231.nc",
+                "compressed=no",
+                "exp_concept_level=c|c",
+                "filesystem=local",
+                "imp_concept_level=d",
+                "ndb=1",
+                "ndbms=1",
                 "nhost=1",
                 "import_metadata=yes",
                 "check_compliance=no",
                 "units=d"
             ],
-            "dependencies": [{"task": "Create Container Scenario"}]
+            "dependencies": [
+                { "task": "Import without subsetting Scenario" }
+            ]
         },
         {
             "name": "Subset Zone Scenario",
@@ -159,10 +252,18 @@
                 "subset_dims=time|lat|lon",
                 "subset_filter=${7}|${8}"
             ],
-            "dependencies": [{
-                "task": "Import Scenario",
-                "type": "single"
-            }]
+            "dependencies": [
+                { "task": "Import Scenario Only", "type": "single" }
+            ]
+        },
+        {
+            "name": "End Import Type Selection Scenario",
+            "operator": "oph_endif",
+            "arguments": [ ],
+            "dependencies": [
+                { "task": "Import Scenario", "type": "single" },
+                { "task": "Subset Zone Scenario", "type": "single" }
+            ]
         },
         {
             "name": "Subset JJA Scenario",
@@ -171,10 +272,9 @@
                 "subset_dims=time",
                 "subset_filter=2071-06_2071-09,2072-06_2072-09,2073-06_2073-09,2074-06_2074-09,2075-06_2075-09,2076-06_2076-09,2077-06_2077-09,2078-06_2078-09,2079-06_2079-09,2080-06_2080-09,2081-06_2081-09,2082-06_2082-09,2083-06_2083-09,2084-06_2084-09,2085-06_2085-09,2086-06_2086-09,2087-06_2087-09,2088-06_2088-09,2089-06_2089-09,2090-06_2090-09,2091-06_2091-09,2092-06_2092-09,2093-06_2093-09,2094-06_2094-09,2095-06_2095-09,2096-06_2096-09,2097-06_2097-09,2098-06_2098-09,2099-06_2099-09,2100-06_2100-09"
             ],
-            "dependencies": [{
-                "task": "Subset Zone Scenario",
-                "type": "single"
-            }]
+            "dependencies": [
+                { "task": "End Import Type Selection Scenario", "type": "single" }
+            ]
         },
         {
             "name": "90th percentile JJA Scenario",
@@ -185,10 +285,9 @@
 		"concept_level=y",
 		"order=${5}"
             ],
-            "dependencies": [{
-                "task": "Subset JJA Scenario",
-                "type": "single"
-            }]
+            "dependencies": [
+                { "task": "Subset JJA Scenario", "type": "single" }
+            ]
         },
         {
             "name": "Linear regression Scenario",
@@ -197,10 +296,9 @@
             	"query=oph_gsl_fit_linear_coeff(measure)",
 		"measure_type=auto"
             ],
-            "dependencies": [{
-                "task": "90th percentile JJA Scenario",
-                "type": "single"
-            }]
+            "dependencies": [
+                { "task": "90th percentile JJA Scenario", "type": "single" }
+            ]
         },
         {
             "name": "Trend differences",
@@ -211,17 +309,9 @@
                 "container=work"
             ],
             "dependencies": [
-		{	"task": "Create Work Container"	},
-            	{
-                	"task": "Linear regression Scenario",
-                	"argument": "cube",
-                	"type": "single"
-            	},
-            	{
-                	"task": "Linear regression Historical",
-                	"argument": "cube2",
-                	"type": "single"
-            	}
+		{ "task": "Create Work Container"	},
+            	{ "task": "Linear regression Scenario", "argument": "cube", "type": "single" },
+            	{ "task": "Linear regression Historical", "argument": "cube2", "type": "single" }
             ]
         },
         {
@@ -231,10 +321,9 @@
             	"query=oph_mul_scalar(measure,86400)",
 		"measure_type=auto"
             ],
-            "dependencies": [{
-                "task": "Trend differences",
-                "type": "single"
-            }]
+            "dependencies": [
+                { "task": "Trend differences", "type": "single" }
+            ]
         },
         {
             "name": "Metadata update",
@@ -245,10 +334,9 @@
 		"metadata_value=precipitation_trend|Precipitation Trend|mm d-1 y-1",
 		"variable=precip_trend"
             ],
-            "dependencies": [{
-                "task": "Unit change",
-                "type": "single"
-            }]
+            "dependencies": [
+                { "task": "Unit change", "type": "single" }
+            ]
         },
         {
             "name": "Export",
@@ -258,16 +346,20 @@
             	"misc=yes",
             	"output_name=precip_trend_analysis"
             ],
-            "dependencies": [{
-                "task": "Metadata update",
-                "type": "single"
-            }]
+            "dependencies": [
+                { "task": "Metadata update", "type": "single" }
+            ]
         },
         {
             "name": "Create map",
             "operator": "oph_script",
-            "arguments": [ "script=precip_trend_analysis", "args=precip_trend_analysis.nc ${8} ${9}" ],
-            "dependencies": [{ "task": "Export" }]
+            "arguments": [
+                "script=precip_trend_analysis",
+                "args=precip_trend_analysis.nc ${8} ${9}"
+            ],
+            "dependencies": [
+                { "task": "Export" }
+            ]
         }
     ]
 }
