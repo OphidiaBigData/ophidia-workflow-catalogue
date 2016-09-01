@@ -41,7 +41,7 @@
 			"operator": "oph_for",
 			"arguments":
 			[
-				"name=value",
+				"key=value",
 				"values=1|0"
 			],
 			"dependencies":

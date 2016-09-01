@@ -38,7 +38,7 @@
             "name": "loop",
             "operator": "oph_for",
             "arguments": [
-                "name=name_file",
+                "key=name_file",
                 "values=${1}",
                 "parallel=yes"
             ],
@@ -94,7 +94,7 @@
 	{
             "name": "loop_reduce",
             "operator": "oph_for",
-            "arguments": [ "name=index", "values=avg|min|max|var|std", "parallel=yes" ],
+            "arguments": [ "key=index", "values=avg|min|max|var|std", "parallel=yes" ],
             "dependencies": [ { "task":"merging", "type": "single" } ]
 	},
         {

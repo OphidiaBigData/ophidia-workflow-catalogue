@@ -35,7 +35,7 @@
             "name": "Loop on months",
             "operator": "oph_for",
             "arguments": [
-		"name=index",
+		"key=index",
 		"counter=1:12",
 		"values=Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep",
 		"parallel=yes"

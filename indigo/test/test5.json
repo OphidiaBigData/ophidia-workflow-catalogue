@@ -77,7 +77,7 @@
 			"operator": "oph_set",
 			"arguments":
 			[
-				"name=type",
+				"key=type",
 				"value=cubeschema_cubeinfo.Datacube Information.MEASURE TYPE"
 			],
 			"dependencies":
@@ -90,7 +90,7 @@
 			"operator": "oph_for",
 			"arguments":
 			[
-				"name=index",
+				"key=index",
 				"values=oph_div_array|oph_sub_array",
 				"parallel=$5"
 			],

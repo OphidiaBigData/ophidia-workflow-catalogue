@@ -41,7 +41,7 @@
 			"operator": "oph_for",
 			"arguments":
 			[
-				"name=index",
+				"key=index",
 				"counter=1:4",
 				"parallel=yes"
 			],
