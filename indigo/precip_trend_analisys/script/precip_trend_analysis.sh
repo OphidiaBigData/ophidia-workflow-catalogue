@@ -19,6 +19,9 @@ RelWorkDir="`dirname \"$0\"`"
 AbsWorkDir="`( cd \"$RelWorkDir\" && pwd )`"
 InFile=$OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/$FileName
 
+LATS=180
+LONS=360
+
 # Bilinear regridding
 if [ "$NewGrid" != "" ]; then
 
@@ -29,8 +32,10 @@ XFIRST=${LonRange%%:*}
 YFIRST=${LatRange%%:*}
 XLAST=${LonRange##*:}
 YLAST=${LatRange##*:}
-XINC=`echo "(($XLAST)-($XFIRST))/($XSIZE)" | bc -l`
-YINC=`echo "(($YLAST)-($YFIRST))/($YSIZE)" | bc -l`
+LATS=`echo "($YLAST)-($YFIRST)" | bc -l`
+LONS=`echo "($XLAST)-($XFIRST)" | bc -l`
+XINC=`echo "($LONS)/($XSIZE)" | bc -l`
+YINC=`echo "($LATS)/($YSIZE)" | bc -l`
 let XSIZE+=1
 let YSIZE+=1
 
@@ -66,8 +71,10 @@ cp $InFile $BasePath/$OPH_SCRIPT_SESSION_CODE/$OPH_SCRIPT_WORKFLOW_ID/ 2>&1 > /d
 
 # Create and publish UV-CDAT map
 source activate $UVCDATenv
-python $AbsWorkDir/precip_trend_analysis.py $AbsWorkDir $OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/
+python $AbsWorkDir/precip_trend_analysis.py $AbsWorkDir $OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/ $LATS $LONS
 source deactivate
+
+cp $OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/precip_trend_analysis.png $BasePath/$OPH_SCRIPT_SESSION_CODE/$OPH_SCRIPT_WORKFLOW_ID/
 
 exit 0
 

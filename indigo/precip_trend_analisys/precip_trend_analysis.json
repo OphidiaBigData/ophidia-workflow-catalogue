@@ -1,7 +1,7 @@
 {
     "name": "precip_trend_analysis",
     "author": "CMCC Foundation",
-    "abstract": "Workflow for the analysis of precipitation trends related to different scenarios. ${1} is ncores; ${2} is the model (e.g. CMCC-CM); ${3} is the scenario (e.g. rcp85); ${4} is the frequency (e.g. day); ${5} is the percentile (e.g. 0.9); ${6} is the past time subset (e.g. 1976_2006); ${7} is the future time subset (e.g. 2071_2101); ${8} is the geographic subset (e.g. 30:45|0:40); ${9} is the grid of output map using the format r<lon>x<lat> (e.g. r360x180), i.e. a global regular lon/lat grid (this parameter is optional and by default the lon/lat grid of input file is adopted); ${10} import type, set to '1' in case only subsetting data have to be imported (optional).",
+    "abstract": "Workflow for the analysis of precipitation trends related to different scenarios. ${1} is ncores; ${2} is the model (e.g. CMCC-CM); ${3} is the scenario (e.g. rcp85); ${4} is the frequency (e.g. day); ${5} is the percentile (e.g. 0.9); ${6} is the past time subset (e.g. 1976_2006); ${7} is the future time subset (e.g. 2071_2101); ${8} is the geographic subset (e.g. 30:45|0:40); ${9} is the grid of output map using the format r<lon>x<lat> (e.g. r360x180), i.e. a global regular lon/lat grid (this parameter is optional and by default the lon/lat grid of input file is adopted); ${10} import type, set to '1' in case only subsetting data have to be imported (optional); ${11} I/O server type.",
     "exec_mode": "sync",
     "cwd": "/",
     "ncores": "${1}",
@@ -50,7 +50,7 @@
         },
         {
             "name": "Import Historical",
-            "operator": "oph_importnc",
+            "operator": "oph_importnc3",
             "arguments": [
                 "container=historical",
                 "exp_dim=lat|lon",
@@ -69,7 +69,9 @@
                 "units=d",
                 "subset_dims=time|lat|lon",
                 "subset_filter=${6}|${8}",
-                "subset_type=coord"
+                "subset_type=coord",
+		"offset=0|2|2",
+		"ioserver=${11}"
             ],
             "dependencies": [
                 { "task": "Import Type Selection Historical" }
@@ -85,7 +87,7 @@
         },
         {
             "name": "Import Historical Only",
-            "operator": "oph_importnc",
+            "operator": "oph_importnc3",
             "arguments": [
                 "container=historical",
                 "exp_dim=lat|lon",
@@ -101,7 +103,8 @@
                 "nhost=1",
                 "import_metadata=yes",
                 "check_compliance=no",
-                "units=d"
+                "units=d",
+		"ioserver=${11}"
             ],
             "dependencies": [
                 { "task": "Import without subsetting Historical" }
@@ -112,7 +115,8 @@
             "operator": "oph_subset2",
             "arguments": [
                 "subset_dims=time|lat|lon",
-                "subset_filter=${6}|${8}"
+                "subset_filter=${6}|${8}",
+		"offset=0|2|2"
             ],
             "dependencies": [
                 { "task": "Import Historical Only", "type": "single" }
@@ -188,7 +192,7 @@
         },
         {
             "name": "Import Scenario",
-            "operator": "oph_importnc",
+            "operator": "oph_importnc3",
             "arguments": [
                 "container=scenario",
                 "exp_dim=lat|lon",
@@ -207,7 +211,9 @@
                 "units=d",
                 "subset_dims=time|lat|lon",
                 "subset_filter=${7}|${8}",
-                "subset_type=coord"
+                "subset_type=coord",
+		"offset=0|2|2",
+		"ioserver=${11}"
             ],
             "dependencies": [
                 { "task": "Import Type Selection Scenario" }
@@ -223,7 +229,7 @@
         },
         {
             "name": "Import Scenario Only",
-            "operator": "oph_importnc",
+            "operator": "oph_importnc3",
             "arguments": [
                 "container=scenario",
                 "exp_dim=lat|lon",
@@ -239,7 +245,8 @@
                 "nhost=1",
                 "import_metadata=yes",
                 "check_compliance=no",
-                "units=d"
+                "units=d",
+		"ioserver=${11}"
             ],
             "dependencies": [
                 { "task": "Import without subsetting Scenario" }
@@ -250,7 +257,8 @@
             "operator": "oph_subset2",
             "arguments": [
                 "subset_dims=time|lat|lon",
-                "subset_filter=${7}|${8}"
+                "subset_filter=${7}|${8}",
+		"offset=0|2|2"
             ],
             "dependencies": [
                 { "task": "Import Scenario Only", "type": "single" }

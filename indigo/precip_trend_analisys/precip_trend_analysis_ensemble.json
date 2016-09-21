@@ -1,7 +1,7 @@
 {
     "name": "Ensemble analysis related to precipitation trend analysis",
     "author": "CMCC",
-    "abstract": "Usage: /path/precip_trend_analysis_ensemble.json file1.nc|file2.nc. The parameter is the list of (OPeNDAP URLs to) NC files to be analyzed.",
+    "abstract": "Usage: /path/precip_trend_analysis_ensemble.json file1.nc|file2.nc <ioserver>. ${1} is the list of (OPeNDAP URLs to) NC files to be analyzed; ${2} is I/O server type.",
     "exec_mode": "sync",
     "ncores": "1",
     "on_exit":"oph_delete",
@@ -51,7 +51,7 @@
         },
         {
             "name": "import",
-            "operator": "oph_importnc2",
+            "operator": "oph_importnc3",
             "arguments": [
                 "cwd=/",
                 "measure=precip_trend",
@@ -59,7 +59,8 @@
                 "import_metadata=yes",
                 "nfrag=1",
                 "container=ensemble",
-                "grid=map"
+                "grid=map",
+		"ioserver=${2}"
             ],
             "dependencies": [
                 {

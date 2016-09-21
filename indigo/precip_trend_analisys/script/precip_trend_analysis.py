@@ -16,6 +16,10 @@ DataDir = sys.argv[2]
 InFile = "/".join([DataDir, "precip_trend_analysis.nc"])
 OutFile = "/".join([DataDir, "precip_trend_analysis.png"])
 
+Lats = sys.argv[3]
+
+Lons = sys.argv[4]
+
 # Process file
 
 f = cdms2.open(InFile)
@@ -39,39 +43,6 @@ cols = vcs.getcolors(levels, split=0)
 
 iso.fillareacolors = cols
 iso.legend = vcs.mklabels(numpy.arange(-3, 3.01, .375))
-# iso.list()
-
-# Prettify ticks
-# bottom
-iso.xticlabels1 = "Lon30"  # vcs predefined list
-# sub ticks
-iso.xmtics1 = "lon10_0"
-# left
-dic = {}
-for i in range(-90, 91, 30):
-    if i < 0:
-        dic[i] = "%iS" % (-i)
-    elif i > 0:
-        dic[i] = "%iN" % i
-    else:
-        dic[i] = "Eq"
-iso.yticlabels1 = dic
-iso.ymtics1 = "lat10_0"
-
-# top
-# First create dic with empty ticks
-dic = {}
-for i in range(-90, 370, 30):
-    dic[i] = ""
-iso.xticlabels2 = dic
-# right
-iso.yticlabels2 = dic
-
-dic = {}
-for i in range(-100, 370, 10):
-    dic[i] = ""
-iso.ymtics2 = dic
-iso.xmtics2 = dic
 
 # Now create a template to move things around a bit
 t = x.createtemplate()
@@ -80,8 +51,17 @@ t.xmintic2.priority = 1  # turn on top sub ticks
 t.ymintic1.priority = 1  # turn on left sub ticks
 t.ymintic2.priority = 1  # turn on right sub ticks
 
-t.scale(.9, "x")
-t.moveto(.05, .2)
+if Lons < 1.2*Lats:
+	t.scale(.9 * Lons / (2 * Lats), "x")
+	t.scale(1.5, "y")
+elif Lons < 2*Lats:
+	t.scale(.9, "x")
+	t.scale(1.8 * Lats / Lons, "y")
+else:
+	t.scale(.9, "x")
+	t.scale(.9, "y")
+t.moveto(.05, .1)
+
 # Move legend
 t.legend.x1 = t.data.x2 + .03
 t.legend.x2 = t.legend.x1 + .03
