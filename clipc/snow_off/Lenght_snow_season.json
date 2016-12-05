@@ -190,7 +190,7 @@
             "name": "Postprocessing operations on file Snow off",
             "operator": "oph_script",
             "arguments": [
-                "script=$4/postprocess2.sh",
+                "script=$4/postprocess.sh",
 		"args=$2|SNOW_OFF_@{year}_$3.nc|@{year}|Snow_off|1",
 		"ncores=1"
             ],
@@ -250,7 +250,7 @@
             "name": "Postprocessing operations on file Length",
             "operator": "oph_script",
             "arguments": [
-                "script=$4/postprocess2.sh",
+                "script=$4/postprocess.sh",
 		"args=$2|LENGTH_@{year}_$3.nc|@{year}|Length|0",
 		"ncores=1"
             ],
