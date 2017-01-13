@@ -61,10 +61,19 @@
 				"measure=monthly_clim_mean_sst"
 			],
 			"dependencies": [
-				{ "task": "Init" },
-				{ "task": "Import", "type": "single" }
+				{ "task": "Import", "type": "single" },
+				{ "task": "Init" }
 			]
 		},
+                {
+                        "name": "Delete pre-processed data",
+                        "operator": "oph_delete",
+                        "arguments": [ "ncores=1" ],
+                        "dependencies": [
+                                { "task": "Import", "type": "single" },
+                                { "task": "Pre-process" }
+                        ]
+                },
 		{
 			"name": "Time reduction",
 			"operator": "oph_reduce2",
@@ -77,9 +86,19 @@
 				"missingvalue=@missingvalue"
 			],
 			"dependencies": [
-				{ "task": "Pre-process", "type": "single" }
+				{ "task": "Pre-process", "type": "single" },
+				{ "task": "Delete pre-processed data" }
 			]
 		},
+                {
+                        "name": "Delete pre-processed data 2",
+                        "operator": "oph_delete",
+                        "arguments": [ "ncores=1" ],
+                        "dependencies": [
+                                { "task": "Pre-process", "type": "single" },
+				{ "task": "Time reduction" }
+                        ]
+                },
 		{
 			"name": "Post-process",
 			"operator": "oph_apply",
@@ -105,6 +124,15 @@
 				{ "task": "Post-process", "type": "single" }
 			]
 		},
+		{
+                        "name": "Delete post-processed data",
+                        "operator": "oph_delete",
+                        "arguments": [ "ncores=1" ],
+                        "dependencies": [
+                                { "task": "Post-process", "type": "single" },
+                                { "task": "Export Monthly Averages" }
+                        ]
+                },
 		{
 			"name": "Post-export-script1",
 			"operator": "oph_script",
@@ -168,6 +196,15 @@
 			]
 		},
 		{
+                        "name": "Delete subsetted data",
+                        "operator": "oph_delete",
+                        "arguments": [ "ncores=1" ],
+                        "dependencies": [
+                                { "task": "Extract months", "type": "single" },
+                                { "task": "Evaluate Long-term Averages" }
+                        ]
+                },
+		{
 			"name": "Export Climatology Average",
 			"operator": "oph_exportnc2",
 			"arguments": [
@@ -178,6 +215,15 @@
 				{ "task": "Evaluate Long-term Averages", "type": "single" }
 			]
 		},
+		{
+                        "name": "Delete reduced data",
+                        "operator": "oph_delete",
+                        "arguments": [ "ncores=1" ],
+                        "dependencies": [
+                                { "task": "Evaluate Long-term Averages", "type": "single" },
+                                { "task": "Export Climatology Average" }
+                        ]
+                },
 		{
 			"name": "Post-export-script2",
 			"operator": "oph_script",
@@ -207,8 +253,9 @@
 			"operator": "oph_endfor",
 			"arguments": [ ],
 			"dependencies": [
-				{ "task": "Post-export-script2_2" }
-			]
+				{ "task": "Post-export-script2_2" },
+				{ "task": "Delete subsetted data" },
+				{ "task": "Delete reduced data" }			]
 		},
 		{
 			"name": "Evaluate Long-term Average",
@@ -237,6 +284,26 @@
 			]
 		},
 		{
+                        "name": "Delete short-term average",
+                        "operator": "oph_delete",
+                        "arguments": [ "ncores=1" ],
+                        "dependencies": [
+                                { "task": "Time reduction", "type": "single" },
+				{ "task": "Post-process" },
+				{ "task": "End loop" },
+                                { "task": "Evaluate Anomaly" }
+                        ]
+                },
+		{
+                        "name": "Delete long-term average",
+                        "operator": "oph_delete",
+                        "arguments": [ "ncores=1" ],
+                        "dependencies": [
+                                { "task": "Evaluate Long-term Average", "type": "single" },
+                                { "task": "Evaluate Anomaly" }
+                        ]
+                },
+		{
 			"name": "Export Monthly Anomaly",
 			"operator": "oph_exportnc2",
 			"arguments": [
@@ -247,6 +314,15 @@
 				{ "task": "Evaluate Anomaly", "type": "single" }
 			]
 		},
+		{
+                        "name": "Delete anomaly data",
+                        "operator": "oph_delete",
+                        "arguments": [ "ncores=1" ],
+                        "dependencies": [
+                                { "task": "Evaluate Anomaly", "type": "single" },
+                                { "task": "Export Monthly Anomaly" }
+                        ]
+                },
 		{
 			"name": "Post-export-script3",
 			"operator": "oph_script",
@@ -270,6 +346,23 @@
 			"dependencies": [
 				{ "task": "Post-export-script3" }
 			]
+		},
+		{
+			"name": "Delete Work Container",
+			"operator": "oph_deletecontainer",
+			"arguments": [
+				"container=work",
+				"hidden=no",
+				"delete_type=physical"
+			],
+			"dependencies": [
+				{ "task": "Delete pre-processed data" },
+				{ "task": "Delete post-processed data" },
+				{ "task": "Delete short-term average" },
+				{ "task": "Delete long-term average" },
+				{ "task": "Delete anomaly data" }
+			],
+			"on_error": "skip"
 		}
 	]
 }
