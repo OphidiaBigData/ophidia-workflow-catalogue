@@ -214,7 +214,7 @@
 	    "name": "Evaluate Max-Min",
             "operator": "oph_intercube",
             "arguments": [
-		"output_measure=Length",
+		"measure=Length",
                 "operation=sub",
 		"description=Length snow for @{year}"
             ],

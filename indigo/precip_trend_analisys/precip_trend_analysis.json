@@ -313,7 +313,7 @@
             "operator": "oph_intercube",
             "arguments": [
             	"operation=sub",
-            	"output_measure=precip_trend",
+            	"measure=precip_trend",
                 "container=work"
             ],
             "dependencies": [
