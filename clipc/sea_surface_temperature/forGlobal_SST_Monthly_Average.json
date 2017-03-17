@@ -34,7 +34,7 @@
 		},
 		{
 			"name": "Import",
-			"operator": "oph_importnc3",
+			"operator": "oph_importnc",
 			"arguments":
 			[ 
 				"src_path=ESA-CCI-SST-1991_2010_day.nc",

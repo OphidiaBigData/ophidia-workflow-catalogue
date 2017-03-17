@@ -50,7 +50,7 @@
         },
         {
             "name": "Import Historical",
-            "operator": "oph_importnc3",
+            "operator": "oph_importnc",
             "arguments": [
                 "container=historical",
                 "exp_dim=lat|lon",
@@ -87,7 +87,7 @@
         },
         {
             "name": "Import Historical Only",
-            "operator": "oph_importnc3",
+            "operator": "oph_importnc",
             "arguments": [
                 "container=historical",
                 "exp_dim=lat|lon",
@@ -192,7 +192,7 @@
         },
         {
             "name": "Import Scenario",
-            "operator": "oph_importnc3",
+            "operator": "oph_importnc",
             "arguments": [
                 "container=scenario",
                 "exp_dim=lat|lon",
@@ -229,7 +229,7 @@
         },
         {
             "name": "Import Scenario Only",
-            "operator": "oph_importnc3",
+            "operator": "oph_importnc",
             "arguments": [
                 "container=scenario",
                 "exp_dim=lat|lon",

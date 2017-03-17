@@ -51,7 +51,7 @@
         },
         {
             "name": "import",
-            "operator": "oph_importnc3",
+            "operator": "oph_importnc",
             "arguments": [
                 "cwd=/",
                 "measure=precip_trend",
