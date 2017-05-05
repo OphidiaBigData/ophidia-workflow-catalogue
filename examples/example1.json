@@ -1,0 +1,84 @@
+{
+	"name": "Example1",
+	"author": "CMCC",
+	"abstract": "Simple workflow",
+	"exec_mode": "async",
+	"ncores": "2",
+	"on_exit": "oph_delete",
+	"cwd": "/",
+	"tasks":
+	[
+		{
+			"name": "Subset",
+			"operator": "oph_subset2",
+			"arguments":
+			[
+				"cube=$1",
+				"subset_dims=lat|lon",
+				"subset_filter=35:45|10:25",
+				"description=subset"
+			]
+		},
+		{
+			"name": "Time reduction",
+			"operator": "oph_reduce2",
+			"arguments":
+			[
+				"operation=avg",
+				"dim=time",
+				"description=Avg"
+			],
+			"dependencies": [
+				{ "task": "Subset", "type": "single" }
+			]
+		},
+		{
+			"name": "Conversion",
+			"operator": "oph_apply",
+			"arguments":
+			[
+				"query=oph_sum_scalar('OPH_FLOAT','OPH_FLOAT',measure,-273.15)"
+			],
+			"dependencies": [
+				{ "task": "Time reduction", "type": "single" }
+			]
+		},
+		{
+			"name": "Boxplot",
+			"operator": "oph_apply",
+			"arguments":
+			[
+				"query=oph_gsl_boxplot('OPH_FLOAT','OPH_FLOAT',measure)"
+			],
+			"dependencies": [
+				{ "task": "Subset", "type": "single" }
+			]
+		},
+		{
+			"name": "Conversion2",
+			"operator": "oph_apply",
+			"arguments":
+			[
+				"query=oph_sum_scalar('OPH_FLOAT','OPH_FLOAT',measure,-273.15)"
+			],
+			"dependencies": [
+				{ "task": "Boxplot", "type": "single" }
+			]
+		},
+		{
+			"name": "Export",
+			"operator": "oph_exportnc2",
+			"dependencies": [
+				{ "task": "Conversion", "type": "single" }
+			]
+		},
+		{
+			"name": "Export2",
+			"operator": "oph_exportnc2",
+			"dependencies": [
+				{ "task": "Conversion2", "type": "single" }
+			]
+		}
+	]
+}
+
