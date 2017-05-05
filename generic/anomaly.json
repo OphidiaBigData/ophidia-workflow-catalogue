@@ -1,0 +1,168 @@
+{
+	"name": "Anomaly evaluator", 
+	"author": "CMCC",
+	"abstract": "This workflow evaluates the anomaly. Arguments: $1 is ncores, $2 is the path to files to be imported into the same cube, $3 is the measure name. Concerning the grid, lat and lon will be explicit dimensions while time will be an implicit dimension.",
+	"exec_mode": "sync",
+	"cwd": "/",
+	"ncores": "$1",
+	"on_exit": "oph_delete",
+	"tasks":
+	[
+		{
+			"name": "Init",
+			"operator": "oph_set",
+			"arguments": [
+				"key=missingvalue",
+				"value=1.e+20"
+			]
+		},
+		{
+			"name": "Create Work Container",
+			"operator": "oph_createcontainer",
+			"arguments": [
+				"container=work",
+				"dim=depth|lat|lon|time",
+				"dim_type=float|double|double|float",
+				"hierarchy=oph_base|oph_base|oph_base|oph_time",
+				"compressed=no",
+				"ncores=1",
+				"base_time=1999-01-01 00:00:00",
+				"calendar=standard",
+				"units=d"
+			],
+			"on_error": "skip"
+		},
+		{
+			"name": "Get file list",
+			"operator": "oph_fs",
+			"arguments": [ "path=${2}" ]
+		},
+		{
+			"name": "Loop on files",
+			"operator": "oph_for",
+			"arguments":
+			[
+				"key=filename",
+				"values=/${2}(*,2)"
+			],
+			"dependencies": [
+				{ "task": "Get file list" }
+			]
+		},
+		{
+			"name": "Select Import or Concat",
+			"operator": "oph_if",
+			"arguments": [ "condition=&{filename}=1" ],
+			"dependencies": [
+				{ "task": "Loop on files", "type": "single" }
+			]
+		},
+		{
+			"name": "Import",
+			"operator": "oph_importnc",
+			"arguments":
+			[ 
+				"src_path=${2}/@{filename}",
+				"measure=${3}",
+				"base_time=1999-01-01 00:00:00",
+				"imp_concept_level=d",
+				"units=d",
+				"imp_dim=time",
+				"container=work",
+				"description=File: @{filename}"
+			],
+			"dependencies": [
+				{ "task": "Select Import or Concat" },
+				{ "task": "Create Work Container" }			
+			]
+		},
+		{
+			"name": "Else",
+			"operator": "oph_else",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Select Import or Concat", "type": "single" }
+			]
+		},
+		{
+			"name": "Concat",
+			"operator": "oph_concatnc",
+			"arguments":
+			[ 
+				"src_path=${2}/@{filename}",
+				"dim_offset=0",
+				"description=Added file: @{filename}"
+			],
+			"dependencies": [
+				{ "task": "Else", "type": "single" }			
+			]
+		},
+		{
+			"name": "EndIf",
+			"operator": "oph_endif",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Import", "type": "single" },
+				{ "task": "Concat", "type": "single" }
+			]
+		},
+		{
+			"name": "End loop",
+			"operator": "oph_endfor",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "EndIf", "type": "single" }
+			]
+		},
+		{
+			"name": "Pre-process",
+			"operator": "oph_apply",
+			"arguments":
+			[
+				"query=oph_predicate(measure,'x-10000','>0','@{missingvalue}','x')",
+				"description=Pre-processed data",
+				"measure_type=auto",
+				"measure=${3}"
+			],
+			"dependencies": [
+				{ "task": "End loop", "type": "single" },
+				{ "task": "Init" }
+			]
+		},
+		{
+			"name": "Evaluate Long-term Average",
+			"operator": "oph_apply",
+			"arguments": [
+				"query=oph_extend(oph_reduce(measure,'oph_avg',0,2,@{missingvalue}),oph_count_array(measure))",
+				"measure_type=auto",
+				"description=Long-term Average"
+			],
+			"dependencies": [
+				{ "task": "Pre-process", "type": "single" }
+			]
+		},
+		{
+			"name": "Evaluate Anomaly",
+			"operator": "oph_intercube",
+			"arguments": [
+				"measure=anomaly",
+                		"operation=sub",
+				"description=Long-term Average",
+				"missingvalue=@{missingvalue}"
+			],
+			"dependencies": [
+				{ "task": "Pre-process", "type": "single" },
+				{ "task": "Evaluate Long-term Average", "type": "single", "argument":"cube2" }
+			]
+		},
+		{
+			"name": "Export Anomaly",
+			"operator": "oph_exportnc2",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Evaluate Anomaly", "type": "single" }
+			]
+		}
+	]
+}
+
