@@ -1,0 +1,77 @@
+{
+    "name": "Test Workflow", 
+    "author": "CMCC",
+    "abstract": "Using this wf for test purposes. $1 is the path of the source nc file, $2 the output path",
+    "exec_mode": "async",
+    "cwd": "/",
+    "ncores": "2",
+    "on_exit": "oph_delete",
+    "tasks": [
+	{
+            "name": "Import",
+            "operator": "oph_importnc3",
+            "arguments": [
+		"src_path=$1",
+		"nfrag=10",
+		"imp_dim=time",
+		"description=tos",
+		"measure=tos"
+            ]
+        },
+	{
+            "name": "Unit conversion",
+            "operator": "oph_apply",
+            "arguments": [
+		"query=oph_sum_scalar('OPH_FLOAT','OPH_FLOAT',measure,-273.15)",
+		"description=celsius"
+            ],
+	    "dependencies": [
+		{ "task": "Import", "type": "single" }
+            ]
+        },
+	{
+            "name": "Loop",
+            "operator": "oph_for",
+            "arguments": [
+		"key=index",
+		"counter=1:3",
+		"values=max|min|avg",
+		"parallel=yes"
+            ],
+	    "dependencies": [
+		{ "task": "Unit conversion", "type": "single" }
+            ]
+        },
+	{
+            "name": "Reduction",
+            "operator": "oph_reduce",
+            "arguments": [
+		"operation=@index",
+		"description=@index"
+            ],
+	    "dependencies": [
+		{ "task": "Loop", "type": "single" }
+            ]
+        },
+        {
+            "name": "Export",
+            "operator": "oph_exportnc2",
+	    "arguments": [
+		"output_path=$2",
+		"force=yes",
+		"output_name=tos_@{index}"
+            ],
+            "dependencies": [
+                { "task": "Reduction", "type": "single" }
+            ]
+        },
+	{
+            "name": "End loop",
+            "operator": "oph_endfor",
+            "arguments": [ ],
+	    "dependencies": [
+		{ "task": "Export", "type": "single" }
+            ]
+        }
+    ]
+}
