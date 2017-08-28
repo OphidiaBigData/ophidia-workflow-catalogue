@@ -56,7 +56,7 @@
                 "exp_dim=lat|lon",
                 "imp_dim=time",
                 "measure=pr",
-                "src_path=${2}/historical/${4}/pr_${4}_${2}_historical_r1i1p1_19760101-20051231.nc",
+                "src_path=${2}/historical/${4}/pr_${4}_${2}_historical_r1i1p1.nc",
                 "compressed=no",
                 "exp_concept_level=c|c",
                 "filesystem=local",
@@ -70,8 +70,8 @@
                 "subset_dims=time|lat|lon",
                 "subset_filter=${6}|${8}",
                 "subset_type=coord",
-		"offset=0|2|2",
-		"ioserver=${11}"
+                "offset=0|2|2",
+                "ioserver=${11}"
             ],
             "dependencies": [
                 { "task": "Import Type Selection Historical" }
@@ -93,7 +93,7 @@
                 "exp_dim=lat|lon",
                 "imp_dim=time",
                 "measure=pr",
-                "src_path=${2}/historical/${4}/pr_${4}_${2}_historical_r1i1p1_19760101-20051231.nc",
+                "src_path=${2}/historical/${4}/pr_${4}_${2}_historical_r1i1p1.nc",
                 "compressed=no",
                 "exp_concept_level=c|c",
                 "filesystem=local",
@@ -104,7 +104,7 @@
                 "import_metadata=yes",
                 "check_compliance=no",
                 "units=d",
-		"ioserver=${11}"
+                "ioserver=${11}"
             ],
             "dependencies": [
                 { "task": "Import without subsetting Historical" }
@@ -116,7 +116,7 @@
             "arguments": [
                 "subset_dims=time|lat|lon",
                 "subset_filter=${6}|${8}",
-		"offset=0|2|2"
+                "offset=0|2|2"
             ],
             "dependencies": [
                 { "task": "Import Historical Only", "type": "single" }
@@ -148,8 +148,8 @@
             "arguments": [
                 "operation=quantile",
                 "dim=time",
-		"concept_level=y",
-		"order=${5}"
+                "concept_level=y",
+                "order=${5}"
             ],
             "dependencies": [
                 { "task": "Subset JJA Historical", "type": "single" }
@@ -160,7 +160,7 @@
             "operator": "oph_apply",
             "arguments": [
             	"query=oph_gsl_fit_linear_coeff(measure)",
-		"measure_type=auto"
+                "measure_type=auto"
             ],
             "dependencies": [
                 { "task": "90th percentile JJA Historical", "type": "single" }
@@ -198,7 +198,7 @@
                 "exp_dim=lat|lon",
                 "imp_dim=time",
                 "measure=pr",
-                "src_path=${2}/${3}/${4}/pr_${4}_${2}_${3}_r1i1p1_20700101-21001231.nc",
+                "src_path=${2}/${3}/${4}/pr_${4}_${2}_${3}_r1i1p1.nc",
                 "compressed=no",
                 "exp_concept_level=c|c",
                 "filesystem=local",
@@ -212,8 +212,8 @@
                 "subset_dims=time|lat|lon",
                 "subset_filter=${7}|${8}",
                 "subset_type=coord",
-		"offset=0|2|2",
-		"ioserver=${11}"
+                "offset=0|2|2",
+                "ioserver=${11}"
             ],
             "dependencies": [
                 { "task": "Import Type Selection Scenario" }
@@ -235,7 +235,7 @@
                 "exp_dim=lat|lon",
                 "imp_dim=time",
                 "measure=pr",
-                "src_path=${2}/${3}/${4}/pr_${4}_${2}_${3}_r1i1p1_20700101-21001231.nc",
+                "src_path=${2}/${3}/${4}/pr_${4}_${2}_${3}_r1i1p1.nc",
                 "compressed=no",
                 "exp_concept_level=c|c",
                 "filesystem=local",
@@ -246,7 +246,7 @@
                 "import_metadata=yes",
                 "check_compliance=no",
                 "units=d",
-		"ioserver=${11}"
+                "ioserver=${11}"
             ],
             "dependencies": [
                 { "task": "Import without subsetting Scenario" }
@@ -258,7 +258,7 @@
             "arguments": [
                 "subset_dims=time|lat|lon",
                 "subset_filter=${7}|${8}",
-		"offset=0|2|2"
+                "offset=0|2|2"
             ],
             "dependencies": [
                 { "task": "Import Scenario Only", "type": "single" }
@@ -290,8 +290,8 @@
             "arguments": [
                 "operation=quantile",
                 "dim=time",
-		"concept_level=y",
-		"order=${5}"
+                "concept_level=y",
+                "order=${5}"
             ],
             "dependencies": [
                 { "task": "Subset JJA Scenario", "type": "single" }
@@ -302,7 +302,7 @@
             "operator": "oph_apply",
             "arguments": [
             	"query=oph_gsl_fit_linear_coeff(measure)",
-		"measure_type=auto"
+                "measure_type=auto"
             ],
             "dependencies": [
                 { "task": "90th percentile JJA Scenario", "type": "single" }
@@ -317,7 +317,7 @@
                 "container=work"
             ],
             "dependencies": [
-		{ "task": "Create Work Container"	},
+                { "task": "Create Work Container"	},
             	{ "task": "Linear regression Scenario", "argument": "cube", "type": "single" },
             	{ "task": "Linear regression Historical", "argument": "cube2", "type": "single" }
             ]
@@ -327,7 +327,7 @@
             "operator": "oph_apply",
             "arguments": [
             	"query=oph_mul_scalar(measure,86400)",
-		"measure_type=auto"
+                "measure_type=auto"
             ],
             "dependencies": [
                 { "task": "Trend differences", "type": "single" }
@@ -338,9 +338,9 @@
             "operator": "oph_metadata",
             "arguments": [
             	"mode=insert",
-		"metadata_key=standard_name|long_name|units",
-		"metadata_value=precipitation_trend|Precipitation Trend|mm d-1 y-1",
-		"variable=precip_trend"
+                "metadata_key=standard_name|long_name|units",
+                "metadata_value=precipitation_trend|Precipitation Trend|mm d-1 y-1",
+                "variable=precip_trend"
             ],
             "dependencies": [
                 { "task": "Unit change", "type": "single" }

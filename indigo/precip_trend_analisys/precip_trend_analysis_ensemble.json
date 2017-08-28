@@ -60,7 +60,7 @@
                 "nfrag=1",
                 "container=ensemble",
                 "grid=map",
-		"ioserver=${2}"
+                "ioserver=${2}"
             ],
             "dependencies": [
                 {
@@ -92,12 +92,12 @@
                 }
             ]
         },
-	{
+        {
             "name": "loop_reduce",
             "operator": "oph_for",
             "arguments": [ "key=index", "values=avg|min|max|var|std", "parallel=yes" ],
             "dependencies": [ { "task":"merging", "type": "single" } ]
-	},
+        },
         {
             "name": "reducing",
             "operator": "oph_reduce2",
@@ -116,7 +116,7 @@
             "name": "export",
             "operator": "oph_exportnc2",
             "arguments": [
-		"force=yes",
+                "force=yes",
             	"misc=yes",
                 "output_name=@{index}"
             ],
