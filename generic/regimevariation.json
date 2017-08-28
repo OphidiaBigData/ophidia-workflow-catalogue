@@ -1,0 +1,465 @@
+{
+	"name": "Regime variation", 
+	"author": "CMCC",
+	"abstract": "This workflow evaluates the positive anomalies. Arguments: $1 is ncores, $2 is the path to files to be imported into the same cube (or file name in case $7 is enabled), $3 is the measure name, $4 and $5 identify the first year and the last year to be considered, $6 is the output path, $7 (optional) flag use to enable single import. Concerning the grid, lat and lon will be explicit dimensions while time will be an implicit dimension.",
+	"exec_mode": "sync",
+	"cwd": "/",
+	"ncores": "$1",
+	"on_exit": "oph_delete",
+	"tasks":
+	[
+		{
+			"name": "Init",
+			"operator": "oph_set",
+			"arguments": [
+				"key=missingvalue",
+				"value=1.e+20"
+			]
+		},
+		{
+			"name": "Create Work Container",
+			"operator": "oph_createcontainer",
+			"arguments": [
+				"container=work",
+				"dim=depth|lat|lon|time",
+				"dim_type=float|double|double|float",
+				"hierarchy=oph_base|oph_base|oph_base|oph_time",
+				"compressed=no",
+				"ncores=1",
+				"base_time=1999-01-01 00:00:00",
+				"calendar=standard",
+				"units=d"
+			],
+			"on_error": "skip"
+		},
+		{
+			"name": "If one file",
+			"operator": "oph_if",
+			"arguments": [ "condition=${7}" ]
+		},
+		{
+			"name": "Import single file",
+			"operator": "oph_importnc",
+			"arguments":
+			[ 
+				"src_path=${2}",
+				"measure=${3}",
+				"base_time=1999-01-01 00:00:00",
+				"imp_concept_level=d",
+				"units=d",
+				"imp_dim=time",
+				"container=work",
+				"subset_type=coord",
+				"subset_dims=time",
+				"subset_filter=${4}-01-01_${5}-12-31",
+				"description=File: ${2}",
+				"ioserver=mysql_table"
+			],
+			"dependencies": [
+				{ "task": "If one file" },
+				{ "task": "Create Work Container" }
+			]
+		},
+		{
+			"name": "Else more files",
+			"operator": "oph_else",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "If one file" }
+			]
+		},
+		{
+			"name": "Get file list",
+			"operator": "oph_fs",
+			"arguments": [ "dpath=${2}" ],
+			"dependencies": [
+				{ "task": "Else more files" }
+			]
+		},
+		{
+			"name": "Loop on files",
+			"operator": "oph_for",
+			"arguments":
+			[
+				"key=filename",
+				"values=/${2}(*,2)"
+			],
+			"dependencies": [
+				{ "task": "Get file list" }
+			]
+		},
+		{
+			"name": "Select Import or Concat",
+			"operator": "oph_if",
+			"arguments": [ "condition=&{filename}=1" ],
+			"dependencies": [
+				{ "task": "Loop on files", "type": "single" }
+			]
+		},
+		{
+			"name": "Import",
+			"operator": "oph_importnc",
+			"arguments":
+			[ 
+				"src_path=${2}/@{filename}",
+				"measure=${3}",
+				"base_time=1999-01-01 00:00:00",
+				"imp_concept_level=d",
+				"units=d",
+				"imp_dim=time",
+				"container=work",
+				"description=File: @{filename}",
+				"ioserver=ophidiaio_memory"
+			],
+			"dependencies": [
+				{ "task": "Select Import or Concat" },
+				{ "task": "Create Work Container" }
+			]
+		},
+		{
+			"name": "Else",
+			"operator": "oph_else",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Select Import or Concat", "type": "single" }
+			]
+		},
+		{
+			"name": "Concat",
+			"operator": "oph_concatnc",
+			"arguments":
+			[ 
+				"src_path=${2}/@{filename}",
+				"dim_offset=0",
+				"description=Added file: @{filename}"
+			],
+			"dependencies": [
+				{ "task": "Else", "type": "single" }
+			]
+		},
+		{
+			"name": "Delete previous",
+			"operator": "oph_delete",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Else", "type": "single" },
+				{ "task": "Concat" }
+			]
+		},
+		{
+			"name": "EndIf",
+			"operator": "oph_endif",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Import", "type": "single" },
+				{ "task": "Concat", "type": "single" },
+				{ "task": "Delete previous" }
+			]
+		},
+		{
+			"name": "End loop on files",
+			"operator": "oph_endfor",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "EndIf", "type": "single" }
+			]
+		},
+		{
+			"name": "Pre-process",
+			"operator": "oph_subset2",
+			"arguments":
+			[
+				"subset_dims=time",
+				"subset_filter=${4}-01-01_${5}-12-31",
+				"description=Filtered on input time interval"
+			],
+			"dependencies": [
+				{ "task": "End loop on files", "type": "single" }
+			]
+		},
+		{
+			"name": "EndIf on input files",
+			"operator": "oph_endif",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Import single file", "type": "single" },
+				{ "task": "Pre-process", "type": "single" }
+			]
+		},
+		{
+			"name": "Loop on years",
+			"operator": "oph_for",
+			"arguments":
+			[
+				"key=year",
+				"counter=$4:$5",
+				"parallel=yes"
+			],
+			"dependencies": [
+				{ "task": "EndIf on input files", "type": "single" }
+			]
+		},
+		{
+			"name": "Extract year",
+			"operator": "oph_subset2",
+			"arguments":
+			[
+				"subset_dims=time",
+				"subset_filter=&{year}-01-01_&{year}-12-31",
+				"description=Year &{year}"
+			],
+			"dependencies": [
+				{ "task": "Loop on years", "type": "single" }
+			],
+			"on_error": "skip"
+		},
+		{
+			"name": "Evaluate Weekly Averages",
+			"operator": "oph_apply",
+			"arguments":
+			[
+				"query=oph_padding(oph_reduce(measure,'oph_avg',7,2,@{missingvalue}),53,@{missingvalue})",
+				"measure_type=auto",
+				"description=Weekly Averages"
+			],
+			"dependencies": [
+				{ "task": "Init" },
+				{ "task": "Extract year", "type": "single" }
+			],
+			"on_error": "skip"
+		},
+		{
+			"name": "End loop on years",
+			"operator": "oph_endfor",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Evaluate Weekly Averages", "type": "all" }
+			]
+		},
+		{
+			"name": "Merging",
+			"operator": "oph_mergecubes2",
+			"arguments": [
+				"dim=year",
+				"description=Dataset of Weekly Averages"
+			],
+			"dependencies": [
+				{ "task": "End loop on years", "type": "all", "argument": "cubes" }
+			]
+		},
+		{
+			"name": "Evaluate Climate Weekly Averages",
+			"operator": "oph_reduce2",
+			"arguments": [
+				"dim=year",
+				"operation=avg",
+				"missingvalue=@{missingvalue}",
+				"description=Climate Weekly Averages"
+			],
+			"dependencies": [
+				{ "task": "Merging", "type": "single" }
+			]
+		},
+		{
+			"name": "Evaluate Climate Weekly Deviations",
+			"operator": "oph_reduce2",
+			"arguments": [
+				"dim=year",
+				"operation=std",
+				"missingvalue=@{missingvalue}",
+				"description=Climate Weekly Deviations"
+			],
+			"dependencies": [
+				{ "task": "Merging", "type": "single" }
+			]
+		},
+		{
+			"name": "Evaluate Climate Weekly Thresholds",
+			"operator": "oph_intercube",
+			"arguments": [
+				"operation=sum",
+				"measure=threshold",
+				"missingvalue=@{missingvalue}",
+				"description=Climate Weekly Thresholds"
+			],
+			"dependencies": [
+				{ "task": "Evaluate Climate Weekly Averages", "type": "single" },
+				{ "task": "Evaluate Climate Weekly Deviations", "type": "single", "argument": "cube2" }
+			]
+		},
+		{
+			"name": "Extend Climate Weekly Thresholds",
+			"operator": "oph_apply",
+			"arguments": [
+				"query=oph_extend(measure,7,'i')",
+				"measure_type=auto",
+				"description=Climate Weekly Thresholds (extended)"
+			],
+			"dependencies": [
+				{ "task": "Evaluate Climate Weekly Thresholds", "type": "single" }
+			]
+		},
+		{
+			"name": "Loop on years for concat",
+			"operator": "oph_for",
+			"arguments":
+			[
+				"key=year",
+				"counter=$4:$5"
+			],
+			"dependencies": [
+				{ "task": "Extend Climate Weekly Thresholds", "type": "single" }
+			]
+		},
+		{
+			"name": "Extract year for concat",
+			"operator": "oph_apply",
+			"arguments": [
+				"query=oph_get_subarray(measure,1,oph_convert_d(oph_predicate(oph_to_bin('-@{year}'),'step(x % 4) - step(x % 100) + step(x % 400)','>0','366','365')))",
+				"measure_type=auto",
+				"description=Thresholds for year @{year}"
+			],
+			"dependencies": [
+				{ "task": "Extend Climate Weekly Thresholds", "type": "single" },
+				{ "task": "Loop on years for concat" }
+			]
+		},
+		{
+			"name": "Select for concat",
+			"operator": "oph_if",
+			"arguments": [ "condition=&{year}>$4", "forward=yes" ],
+			"dependencies": [
+				{ "task": "Extract year for concat", "type": "single" }
+			]
+		},
+		{
+			"name": "Concat new year",
+			"operator": "oph_mergecubes",
+			"arguments": [ "mode=a" ],
+			"dependencies": [
+				{ "task": "Loop on years for concat", "type": "single", "argument": "cubes" },
+				{ "task": "Select for concat", "type": "single", "argument": "cubes" }
+			]
+		},
+		{
+			"name": "Delete previous year",
+			"operator": "oph_delete",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Loop on years for concat", "type": "single" },
+				{ "task": "Concat new year" }
+			]
+		},
+		{
+			"name": "EndIf for concat",
+			"operator": "oph_endif",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Concat new year", "type": "single" },
+				{ "task": "Delete previous year" }
+			]
+		},
+		{
+			"name": "End loop on years for concat",
+			"operator": "oph_endfor",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "EndIf for concat", "type": "single" }
+			]
+		},
+		{
+			"name": "Get schema of concat data",
+			"operator": "oph_cubeschema",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "End loop on years for concat", "type": "single" }
+			]
+		},
+		{
+			"name": "Get length of time series",
+			"operator": "oph_set",
+			"arguments":
+			[
+				"key=time_series_length",
+				"value=cubeschema_diminfo.Dimension Information.SIZE(5)"
+			],
+			"dependencies": [
+				{ "task": "Get schema of concat data" }
+			]
+		},
+		{
+			"name": "Add padding",
+			"operator": "oph_apply",
+			"arguments":
+			[
+				"query=oph_padding(measure,@{time_series_length},@{missingvalue})",
+				"measure_type=auto",
+				"description=File: ${2} padded with @{missingvalue}"
+			],
+			"dependencies": [
+				{ "task": "Init" },
+				{ "task": "Get length of time series" },
+				{ "task": "EndIf on input files", "type": "single" }
+			]
+		},
+		{
+			"name": "Evaluate Anomalies",
+			"operator": "oph_intercube",
+			"arguments": [
+				"measure=anomaly",
+				"description=Positive anomalies",
+				"missingvalue=@{missingvalue}"
+			],
+			"dependencies": [
+				{ "task": "Add padding", "type": "single" },
+				{ "task": "End loop on years for concat", "type": "single", "argument":"cube2" }
+			]
+		},
+		{
+			"name": "Select Outliers",
+			"operator": "oph_apply",
+			"arguments": [
+				"query=oph_predicate(measure,'x-10000','>0','@{missingvalue}','step(x)')",
+				"measure_type=auto",
+				"description=Outliers"
+			],
+			"dependencies": [
+				{ "task": "Evaluate Anomalies", "type": "single" }
+			]
+		},
+		{
+			"name": "Evaluate Total Number of Anomalies",
+			"operator": "oph_reduce2",
+			"arguments":
+			[
+				"dim=time",
+				"operation=sum",
+				"missingvalue=@{missingvalue}",
+				"description=Total Number of Anomalies"
+			],
+			"dependencies": [
+				{ "task": "Select Outliers", "type": "single" }
+			]
+		},
+		{
+			"name": "Export Outliers",
+			"operator": "oph_exportnc2",
+			"arguments": [ "output_path=${6}" ],
+			"dependencies": [
+				{ "task": "Evaluate Total Number of Anomalies", "type": "single" }
+			]
+		},
+		{
+			"name": "Translate Output File",
+			"operator": "oph_script",
+			"arguments":
+			[
+				"script=translate",
+				"args=${6}/anomaly.nc|${6}/anomaly.asc"
+			],
+			"dependencies": [
+				{ "task": "Export Outliers" }
+			]
+		}		
+	]
+}

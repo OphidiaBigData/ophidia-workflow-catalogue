@@ -1,0 +1,411 @@
+{
+	"name": "SST and SSS", 
+	"author": "CMCC",
+	"abstract": "This workflow evaluates the mean values of temperature and salinity time step by step, and provides a map at each step. Arguments: $1 is ncores, $2 is the path to files to be imported into the same cube, $3 and $4 are the measure names, $5 is the output path, $6 and $7 are the spatial xy subset (e.g. 3457:5000 and 800:1004). Concerning the grid, lat and lon will be explicit dimensions while time will be an implicit dimension.",
+	"exec_mode": "sync",
+	"cwd": "/",
+	"ncores": "${1}",
+	"on_exit": "oph_delete",
+	"host_partition": "test",
+	"tasks":
+	[
+		{
+			"name": "Init",
+			"operator": "oph_set",
+			"arguments":
+			[
+				"key=missingvalue",
+				"value=0"
+			]
+		},
+		{
+			"name": "Create Work Container",
+			"operator": "oph_createcontainer",
+			"arguments": [
+				"container=GLOB16",
+				"dim=y|x|time_counter",
+				"dim_type=int|int|double",
+				"hierarchy=oph_base|oph_base|oph_time",
+				"compressed=no",
+				"ncores=1",
+				"calendar=gregorian",
+				"units=d",
+				"vocabulary=xy"
+			],
+			"on_error": "skip"
+		},
+		{
+			"name": "Init previous index",
+			"operator": "oph_set",
+			"arguments":
+			[
+				"key=previous",
+				"value=1"
+			]
+		},
+		{
+			"name": "Main Loop",
+			"operator": "oph_for",
+			"arguments":
+			[
+				"key=index",
+				"counter=2:51"
+			],
+			"dependencies": [
+				{ "task": "Init" },
+				{ "task": "Create Work Container" },
+				{ "task": "Init previous index" }
+			]
+		},
+		{
+			"name": "Wait next file",
+			"operator": "oph_wait",
+			"arguments":
+			[ 
+				"type=file",
+				"filename=${2}/GLOB16_1d_grid_T2D_record_&{index}.nc",
+				"message=Waiting for ${2}/GLOB16_1d_grid_T2D_record_&{index}.nc",
+				"timeout=60"
+			],
+			"dependencies": [
+				{ "task": "Main Loop" }
+			]
+		},
+		{
+			"name": "Loop on variables",
+			"operator": "oph_for",
+			"arguments":
+			[
+				"key=variable",
+				"values=${3}|${4}",
+				"parallel=yes"
+			],
+			"dependencies": [
+				{ "task": "Wait next file" }
+			]
+		},
+		{
+			"name": "Import new file",
+			"operator": "oph_importnc",
+			"arguments":
+			[ 
+				"src_path=${2}/GLOB16_1d_grid_T2D_record_@{previous}.nc",
+				"measure=@{variable}",
+				"exp_dim=y",
+				"imp_dim=x|time_counter",
+				"imp_concept_level=c|d",
+				"units=s",
+				"container=GLOB16",
+				"description=File #@{previous} - Variable @{variable}"
+			],
+			"dependencies": [
+				{ "task": "Loop on variables" }
+			]
+		},
+		{
+			"name": "Add FillValue",
+			"operator": "oph_metadata",
+			"arguments":
+			[ 
+				"mode=insert",
+				"metadata_type=float",
+				"metadata_key=_FillValue",
+				"metadata_value=@{missingvalue}",
+				"variable=@{variable}"
+			],
+			"dependencies": [
+				{ "task": "Import new file", "type": "single" }
+			]
+		},
+		{
+			"name": "Loop on space types",
+			"operator": "oph_for",
+			"arguments":
+			[
+				"key=space_type",
+				"values=global|local",
+				"parallel=yes"
+			],
+			"dependencies": [
+				{ "task": "Add FillValue", "type": "single" }
+			]
+		},
+		{
+			"name": "If subset",
+			"operator": "oph_if",
+			"arguments": [
+				"condition=&{space_type}>1",
+				"forward=yes"
+			],
+			"dependencies": [
+				{ "task": "Loop on space types", "type": "single" }
+			]
+		},
+		{
+			"name": "Spatial subset",
+			"operator": "oph_subset",
+			"arguments":
+			[
+				"subset_dims=x|y",
+				"subset_filter=${6}|${7}",
+				"description=Subset of File #@{previous} - Variable @{variable}"
+			],
+			"dependencies": [
+				{ "task": "If subset", "type": "single" }
+			]
+		},
+		{
+			"name": "EndIf on subset",
+			"operator": "oph_endif",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Spatial subset", "type": "single" }
+			]
+		},
+		{
+			"name": "Reduction",
+			"operator": "oph_reduce2",
+			"arguments":
+			[
+				"operation=avg",
+				"dim=x",
+				"missingvalue=@{missingvalue}",
+				"description=Reduced"
+			],
+			"dependencies": [
+				{ "task": "EndIf on subset", "type": "single" }
+			]
+		},
+		{
+			"name": "Merging",
+			"operator": "oph_merge",
+			"arguments":
+			[
+				"operation=avg",
+				"description=Merged"
+			],
+			"dependencies": [
+				{ "task": "Reduction", "type": "single" }
+			]
+		},
+		{
+			"name": "Aggregation",
+			"operator": "oph_aggregate",
+			"arguments":
+			[
+				"operation=avg",
+				"missingvalue=@{missingvalue}",
+				"description=Aggregated",
+				"ncores=1"
+			],
+			"dependencies": [
+				{ "task": "Merging", "type": "single" }
+			]
+		},
+		{
+			"name": "If first step",
+			"operator": "oph_if",
+			"arguments": [
+				"condition=@{previous}=1"
+			],
+			"dependencies": [
+				{ "task": "Aggregation", "type": "single" }
+			]
+		},
+		{
+			"name": "Init time series",
+			"operator": "oph_set",
+			"arguments":
+			[
+				"key=time_series_@{variable}_@{space_type}",
+				"value=@CUBE"
+			],
+			"dependencies": [
+				{ "task": "If first step", "type": "single" }
+			]
+		},
+		{
+			"name": "Next steps",
+			"operator": "oph_else",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "If first step", "type": "single" }
+			]
+		},
+		{
+			"name": "Concat new step",
+			"operator": "oph_mergecubes",
+			"arguments":
+			[
+				"cubes=@{time_series_@{variable}_@{space_type}}|@CUBE",
+				"hold_values=yes",
+				"mode=a",
+				"ncores=1"
+			],
+			"dependencies": [
+				{ "task": "Next steps", "type": "single", "argument": "cube" }
+			]
+		},
+		{
+			"name": "Update time series",
+			"operator": "oph_set",
+			"arguments":
+			[
+				"key=time_series_@{variable}_@{space_type}",
+				"value=@CUBE"
+			],
+			"dependencies": [
+				{ "task": "Concat new step", "type": "single" }
+			]
+		},
+		{
+			"name": "EndIf on steps",
+			"operator": "oph_endif",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Init time series", "type": "single" },
+				{ "task": "Update time series", "type": "single" }
+			]
+		},
+		{
+			"name": "Export current time series",
+			"operator": "oph_exportnc2",
+			"arguments":
+			[
+				"output_path=${5}",
+				"output_name=@{variable}_@{space_type}_@{previous}_progress",
+				"ncores=1"
+			],
+			"dependencies": [
+				{ "task": "EndIf on steps", "type": "single" }
+			]
+		},
+		{
+			"name": "If first file",
+			"operator": "oph_if",
+			"arguments": [
+				"condition=@{previous}=1"
+			],
+			"dependencies": [
+				{ "task": "EndIf on subset", "type": "single" }
+			]
+		},
+		{
+			"name": "Set PID",
+			"operator": "oph_set",
+			"arguments":
+			[
+				"key=current_sum_@{variable}_@{space_type}",
+				"value=@CUBE"
+			],
+			"dependencies": [
+				{ "task": "If first file", "type": "single" }
+			]
+		},
+		{
+			"name": "Else",
+			"operator": "oph_else",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "If first file", "type": "single" }
+			]
+		},
+		{
+			"name": "Update sum",
+			"operator": "oph_intercube",
+			"arguments":
+			[
+				"cube=@{current_sum_@{variable}_@{space_type}}",
+				"operation=sum",
+				"missingvalue=@{missingvalue}",
+				"description=Sum of @{variable} for @{space_type} scenario till #@{previous}"
+			],
+			"dependencies": [
+				{ "task": "Else", "type": "single", "argument": "cube2" }
+			]
+		},
+		{
+			"name": "Update PID",
+			"operator": "oph_set",
+			"arguments":
+			[
+				"key=current_sum_@{variable}_@{space_type}",
+				"value=@CUBE"
+			],
+			"dependencies": [
+				{ "task": "Update sum", "type": "single" }
+			]
+		},
+		{
+			"name": "Evaluate mean value",
+			"operator": "oph_apply",
+			"arguments":
+			[ 
+				"query=oph_predicate(measure,'x-10000','>0','@{missingvalue}','x/@{previous}')",
+				"measure_type=auto",
+				"description=Mean value of @{variable} for @{space_type} scenario till #@{previous}"
+			],
+			"dependencies": [
+				{ "task": "Update PID", "type": "single" }
+			]
+		},
+		{
+			"name": "EndIf",
+			"operator": "oph_endif",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Set PID", "type": "single" },
+				{ "task": "Evaluate mean value", "type": "single" }
+			]
+		},
+		{
+			"name": "Export current mean",
+			"operator": "oph_exportnc2",
+			"arguments":
+			[
+				"output_path=${5}",
+				"output_name=@{variable}_@{space_type}_@{previous}"
+			],
+			"dependencies": [
+				{ "task": "EndIf", "type": "single" }
+			]
+		},
+		{
+			"name": "End loop on space types",
+			"operator": "oph_endfor",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Export current mean" },
+				{ "task": "Export current time series" }
+			]
+		},
+		{
+			"name": "End loop on variables",
+			"operator": "oph_endfor",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "End loop on space types" }
+			]
+		},
+		{
+			"name": "Update previous index",
+			"operator": "oph_set",
+			"arguments":
+			[
+				"key=previous",
+				"value=&{index}"
+			],
+			"dependencies": [
+				{ "task": "End loop on variables" }
+			]
+		},
+		{
+			"name": "End Main Loop",
+			"operator": "oph_endfor",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Update previous index" }
+			]
+		}
+	]
+}

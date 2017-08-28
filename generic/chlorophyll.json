@@ -1,0 +1,145 @@
+{
+	"name": "Chlorophyll", 
+	"author": "CMCC",
+	"abstract": "This workflow evaluates the climate chlorophyll concentration. Arguments: $1 is ncores, $2 is the file name, $3 is the measure name, $4 is the output path. Concerning the grid, lat and lon will be explicit dimensions while time will be an implicit dimension.",
+	"exec_mode": "sync",
+	"cwd": "/",
+	"ncores": "$1",
+	"on_exit": "oph_delete",
+	"tasks":
+	[
+		{
+			"name": "Init",
+			"operator": "oph_set",
+			"arguments": [
+				"key=missingvalue",
+				"value=-999"
+			]
+		},
+		{
+			"name": "Create Work Container",
+			"operator": "oph_createcontainer",
+			"arguments": [
+				"container=chlorophyll",
+				"dim=lat|lon|time",
+				"dim_type=float|float|int",
+				"hierarchy=oph_base|oph_base|oph_time",
+				"compressed=no",
+				"ncores=1",
+				"base_time=1981-01-01 00:00:00",
+				"calendar=gregorian",
+				"units=s"
+			],
+			"on_error": "skip"
+		},
+		{
+			"name": "Import single file",
+			"operator": "oph_importnc",
+			"arguments":
+			[ 
+				"src_path=${2}",
+				"measure=${3}",
+				"base_time=1981-01-01 00:00:00",
+				"imp_concept_level=M",
+				"units=s",
+				"imp_dim=time",
+				"container=chlorophyll",
+				"description=File: ${2}",
+				"ioserver=ophidiaio_memory",
+				"ncores=60"
+			],
+			"dependencies": [
+				{ "task": "Create Work Container" }
+			]
+		},
+		{
+			"name": "Loop on seasons",
+			"operator": "oph_for",
+			"arguments":
+			[
+				"key=season",
+				"counter=0:3:12",
+				"values=all|MAM|JJA|SON|DJF",
+				"parallel=yes"
+			],
+			"dependencies": [
+				{ "task": "Import single file", "type": "single" }
+			]
+		},
+		{
+			"name": "If subset",
+			"operator": "oph_if",
+			"arguments": [ "condition=&{season}", "forward=yes" ],
+			"dependencies": [
+				{ "task": "Loop on seasons", "type": "single" }
+			]
+		},
+		{
+			"name": "Subset on season",
+			"operator": "oph_subset",
+			"arguments":
+			[
+				"subset_filter=&{season}:3:end",
+				"subset_dims=time",
+				"description=Data of season @{season}"
+			],
+			"dependencies": [
+				{ "task": "If subset", "type": "single" }
+			]
+		},
+		{
+			"name": "End if",
+			"operator": "oph_endif",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Subset on season", "type": "single" }
+			]
+		},
+		{
+			"name": "Evaluate climate average",
+			"operator": "oph_reduce",
+			"arguments":
+			[
+				"operation=avg",
+				"missingvalue=@{missingvalue}",
+				"description=Climate average for season @{season}"
+			],
+			"dependencies": [
+				{ "task": "Init" },
+				{ "task": "End if", "type": "single" }
+			]
+		},
+		{
+			"name": "Export climate average",
+			"operator": "oph_exportnc2",
+			"arguments":
+			[
+				"output_path=${4}",
+				"output_name=CHL_@{season}"
+			],
+			"dependencies": [
+				{ "task": "Evaluate climate average", "type": "single" }
+			]
+		},
+		{
+			"name": "Translate output file of climate average",
+			"operator": "oph_script",
+			"arguments":
+			[
+				"script=translate",
+				"args=${4}/CHL_@{season}.nc|${4}/CHL_@{season}.asc"
+			],
+			"dependencies": [
+				{ "task": "Export climate average" }
+			]
+		},
+		{
+			"name": "End loop on seasons",
+			"operator": "oph_endfor",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Translate output file of climate average" }
+			]
+		}
+	]
+}
