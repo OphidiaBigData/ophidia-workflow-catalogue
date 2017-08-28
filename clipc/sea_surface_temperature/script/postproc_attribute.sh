@@ -70,7 +70,7 @@ ncatted -O -h -a institution_url,global,o,c,"www.cmcc.it" $filepath/$filename
 if [ $? -ne 0 ]; then
         exit 15
 fi
-ncatted -O -h -a contact_email,global,o,c,"ophidia-info@lists.cmcc.it" $filepath/$filename
+ncatted -O -h -a contact_email,global,o,c,"ophidia-info@cmcc.it" $filepath/$filename
 if [ $? -ne 0 ]; then
         exit 16
 fi
@@ -82,7 +82,7 @@ ncatted -O -h -a creator_url,global,o,c,"www.cmcc.it" $filepath/$filename
 if [ $? -ne 0 ]; then
         exit 18
 fi
-ncatted -O -h -a creator_email,global,o,c,"ophidia-info@lists.cmcc.it" $filepath/$filename
+ncatted -O -h -a creator_email,global,o,c,"ophidia-info@cmcc.it" $filepath/$filename
 if [ $? -ne 0 ]; then
         exit 19
 fi
