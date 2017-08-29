@@ -6,9 +6,8 @@
     "cwd": "/",
     "ncores": "${1}",
     "on_exit": "oph_delete",
-    "tasks":
-    [
-	{
+    "tasks": [
+        {
             "name": "Create Work Container",
             "operator": "oph_createcontainer",
             "arguments": [
@@ -56,14 +55,13 @@
                 "exp_dim=lat|lon",
                 "imp_dim=time",
                 "measure=pr",
-                "src_path=${2}/historical/${4}/pr_${4}_${2}_historical_r1i1p1.nc",
+                "src_path=precip_trend_data/${2}/historical/${4}/pr_${4}_${2}_historical_r1i1p1.nc",
                 "compressed=no",
                 "exp_concept_level=c|c",
                 "filesystem=local",
                 "imp_concept_level=d",
                 "ndb=1",
                 "ndbms=1",
-                "nhost=1",
                 "import_metadata=yes",
                 "check_compliance=no",
                 "units=d",
@@ -93,14 +91,13 @@
                 "exp_dim=lat|lon",
                 "imp_dim=time",
                 "measure=pr",
-                "src_path=${2}/historical/${4}/pr_${4}_${2}_historical_r1i1p1.nc",
+                "src_path=precip_trend_data/${2}/historical/${4}/pr_${4}_${2}_historical_r1i1p1.nc",
                 "compressed=no",
                 "exp_concept_level=c|c",
                 "filesystem=local",
                 "imp_concept_level=d",
                 "ndb=1",
                 "ndbms=1",
-                "nhost=1",
                 "import_metadata=yes",
                 "check_compliance=no",
                 "units=d",
@@ -159,7 +156,7 @@
             "name": "Linear regression Historical",
             "operator": "oph_apply",
             "arguments": [
-            	"query=oph_gsl_fit_linear_coeff(measure)",
+                "query=oph_gsl_fit_linear_coeff(measure)",
                 "measure_type=auto"
             ],
             "dependencies": [
@@ -198,14 +195,13 @@
                 "exp_dim=lat|lon",
                 "imp_dim=time",
                 "measure=pr",
-                "src_path=${2}/${3}/${4}/pr_${4}_${2}_${3}_r1i1p1.nc",
+                "src_path=precip_trend_data/${2}/${3}/${4}/pr_${4}_${2}_${3}_r1i1p1.nc",
                 "compressed=no",
                 "exp_concept_level=c|c",
                 "filesystem=local",
                 "imp_concept_level=d",
                 "ndb=1",
                 "ndbms=1",
-                "nhost=1",
                 "import_metadata=yes",
                 "check_compliance=no",
                 "units=d",
@@ -235,14 +231,13 @@
                 "exp_dim=lat|lon",
                 "imp_dim=time",
                 "measure=pr",
-                "src_path=${2}/${3}/${4}/pr_${4}_${2}_${3}_r1i1p1.nc",
+                "src_path=precip_trend_data/${2}/${3}/${4}/pr_${4}_${2}_${3}_r1i1p1.nc",
                 "compressed=no",
                 "exp_concept_level=c|c",
                 "filesystem=local",
                 "imp_concept_level=d",
                 "ndb=1",
                 "ndbms=1",
-                "nhost=1",
                 "import_metadata=yes",
                 "check_compliance=no",
                 "units=d",
@@ -301,7 +296,7 @@
             "name": "Linear regression Scenario",
             "operator": "oph_apply",
             "arguments": [
-            	"query=oph_gsl_fit_linear_coeff(measure)",
+                "query=oph_gsl_fit_linear_coeff(measure)",
                 "measure_type=auto"
             ],
             "dependencies": [
@@ -312,21 +307,21 @@
             "name": "Trend differences",
             "operator": "oph_intercube",
             "arguments": [
-            	"operation=sub",
-            	"measure=precip_trend",
+                "operation=sub",
+                "measure=precip_trend",
                 "container=work"
             ],
             "dependencies": [
-                { "task": "Create Work Container"	},
-            	{ "task": "Linear regression Scenario", "argument": "cube", "type": "single" },
-            	{ "task": "Linear regression Historical", "argument": "cube2", "type": "single" }
+                { "task": "Create Work Container"    },
+                { "task": "Linear regression Scenario", "argument": "cube", "type": "single" },
+                { "task": "Linear regression Historical", "argument": "cube2", "type": "single" }
             ]
         },
         {
             "name": "Unit change",
             "operator": "oph_apply",
             "arguments": [
-            	"query=oph_mul_scalar(measure,86400)",
+                "query=oph_mul_scalar(measure,86400)",
                 "measure_type=auto"
             ],
             "dependencies": [
@@ -337,7 +332,7 @@
             "name": "Metadata update",
             "operator": "oph_metadata",
             "arguments": [
-            	"mode=insert",
+                "mode=insert",
                 "metadata_key=standard_name|long_name|units",
                 "metadata_value=precipitation_trend|Precipitation Trend|mm d-1 y-1",
                 "variable=precip_trend"
@@ -350,9 +345,9 @@
             "name": "Export",
             "operator": "oph_exportnc2",
             "arguments": [
-            	"force=yes",
-            	"misc=yes",
-            	"output_name=precip_trend_analysis"
+                "force=yes",
+                "misc=yes",
+                "output_name=precip_trend_analysis"
             ],
             "dependencies": [
                 { "task": "Metadata update", "type": "single" }

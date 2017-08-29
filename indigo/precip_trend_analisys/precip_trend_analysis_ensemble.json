@@ -6,7 +6,7 @@
     "ncores": "1",
     "on_exit":"oph_delete",
     "tasks": [
-	{
+        {
             "name": "Delete Work Container",
             "operator": "oph_deletecontainer",
             "arguments": [
@@ -117,7 +117,7 @@
             "operator": "oph_exportnc2",
             "arguments": [
                 "force=yes",
-            	"misc=yes",
+                "misc=yes",
                 "output_name=@{index}"
             ],
             "dependencies": [
