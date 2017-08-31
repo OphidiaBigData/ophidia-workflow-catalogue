@@ -17,7 +17,11 @@ NewGrid=${4}
 
 RelWorkDir="`dirname \"$0\"`"
 AbsWorkDir="`( cd \"$RelWorkDir\" && pwd )`"
-InFile=$OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/$FileName
+
+InputPath=$OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID
+OutputPath=$BasePath/$OPH_SCRIPT_SESSION_CODE/$OPH_SCRIPT_WORKFLOW_ID
+
+InFile=$InputPath/$FileName
 
 LATS=180
 LONS=360
@@ -49,32 +53,32 @@ xinc = XINC
 yfirst = YFIRST
 yinc = YINC
 EOF
-) > $OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/.grid
-sed -i "s/XSIZE/$XSIZE/g" $OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/.grid
-sed -i "s/YSIZE/$YSIZE/g" $OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/.grid
-sed -i "s/XFIRST/$XFIRST/g" $OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/.grid
-sed -i "s/YFIRST/$YFIRST/g" $OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/.grid
-sed -i "s/XINC/$XINC/g" $OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/.grid
-sed -i "s/YINC/$YINC/g" $OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/.grid
+) > $InputPath/.grid
+sed -i "s/XSIZE/$XSIZE/g" $InputPath/.grid
+sed -i "s/YSIZE/$YSIZE/g" $InputPath/.grid
+sed -i "s/XFIRST/$XFIRST/g" $InputPath/.grid
+sed -i "s/YFIRST/$YFIRST/g" $InputPath/.grid
+sed -i "s/XINC/$XINC/g" $InputPath/.grid
+sed -i "s/YINC/$YINC/g" $InputPath/.grid
 
-tmp=$OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/.tmp.nc
-cdo remapbil,$OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/.grid $InFile $tmp
+tmp=$InputPath/.tmp.nc
+cdo remapbil,$InputPath/.grid $InFile $tmp
 mv $tmp $InFile
 
-rm -f $OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/.grid
+rm -f $InputPath/.grid
 
 fi
 
 # Publish output data using OPeNDAP
-mkdir -p $BasePath/$OPH_SCRIPT_SESSION_CODE/$OPH_SCRIPT_WORKFLOW_ID
-cp $InFile $BasePath/$OPH_SCRIPT_SESSION_CODE/$OPH_SCRIPT_WORKFLOW_ID/ 2>&1 > /dev/null &
+mkdir -p $OutputPath
+cp $InFile $OutputPath/ 2>&1 > /dev/null &
 
 # Create and publish UV-CDAT map
 source activate $UVCDATenv
-python $AbsWorkDir/precip_trend_analysis.py $AbsWorkDir $OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/ $LATS $LONS
+python $AbsWorkDir/precip_trend_analysis.py $AbsWorkDir $InputPath/ $LATS $LONS
 source deactivate
 
-cp $OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/precip_trend_analysis.png $BasePath/$OPH_SCRIPT_SESSION_CODE/$OPH_SCRIPT_WORKFLOW_ID/
+cp $InputPath/precip_trend_analysis.png $OutputPath/
 
 exit 0
 

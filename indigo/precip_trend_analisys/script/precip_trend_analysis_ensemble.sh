@@ -14,15 +14,19 @@ FileNameWithoutExtension=${1}
 
 RelWorkDir="`dirname \"$0\"`"
 AbsWorkDir="`( cd \"$RelWorkDir\" && pwd )`"
-InFile=$OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/$FileNameWithoutExtension.nc
+
+InputPath=$OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID
+OutputPath=$BasePath/$OPH_SCRIPT_SESSION_CODE/$OPH_SCRIPT_WORKFLOW_ID
+
+InFile=$InputPath/$FileNameWithoutExtension.nc
 
 # Publish output data using OPeNDAP
-mkdir -p $BasePath/$OPH_SCRIPT_SESSION_CODE/$OPH_SCRIPT_WORKFLOW_ID
-cp $InFile $BasePath/$OPH_SCRIPT_SESSION_CODE/$OPH_SCRIPT_WORKFLOW_ID/ 2>&1 > /dev/null &
+mkdir -p $OutputPath
+cp $InFile $OutputPath/ 2>&1 > /dev/null &
 
 # Create and publish UV-CDAT map
 source activate $UVCDATenv
-python $AbsWorkDir/precip_trend_analysis_ensemble.py $AbsWorkDir $OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID/ $FileNameWithoutExtension
+python $AbsWorkDir/precip_trend_analysis_ensemble.py $AbsWorkDir $InputPath/ $FileNameWithoutExtension
 source deactivate
 
 exit 0
