@@ -4,7 +4,6 @@
     "abstract": "Workflow for the analysis of precipitation trends related to different scenarios. ${1} is ncores; ${2} is the model (e.g. CMCC-CM); ${3} is the scenario (e.g. rcp45 or rcp85); ${4} is the frequency (e.g. day or mon); ${5} is the percentile (e.g. 0.9); ${6} is the past time subset (e.g. 1976_2006); ${7} is the future time subset (e.g. 2071_2101); ${8} is the geographic subset (e.g. 30:45|0:40); ${9} is the grid of output map using the format r<lon>x<lat> (e.g. r360x180), i.e. a global regular lon/lat grid (this parameter is optional and by default the lon/lat grid of input file is adopted); ${10} import type (optional), set to '1' in case only subsetting data have to be imported (default); ${11} I/O server type (optional).",
     "exec_mode": "sync",
     "cwd": "/",
-    "cdd": "/home/cpalazzo/precip_trend_analysis",
     "ncores": "${1}",
     "on_exit": "oph_delete",
     "tasks": [
