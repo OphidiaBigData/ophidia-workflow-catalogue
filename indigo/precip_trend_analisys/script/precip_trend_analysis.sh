@@ -9,6 +9,9 @@ UVCDATenv=ophidia-nox
 # This script assumes that BasePath to store output file for OPeNDAP is
 BasePath=$OPH_SCRIPT_DATA_PATH/INDIGO/precip_trend_input
 
+# This script assumes that input and output file should be stored at
+DataPath=$BasePath/$OPH_SCRIPT_SESSION_CODE/$OPH_SCRIPT_WORKFLOW_ID
+
 # Input parameters
 FileName=${1}
 LatRange=${2}
@@ -18,10 +21,7 @@ NewGrid=${4}
 RelWorkDir="`dirname \"$0\"`"
 AbsWorkDir="`( cd \"$RelWorkDir\" && pwd )`"
 
-InputPath=$OPH_SCRIPT_SESSION_PATH/$OPH_SCRIPT_WORKFLOW_ID
-OutputPath=$BasePath/$OPH_SCRIPT_SESSION_CODE/$OPH_SCRIPT_WORKFLOW_ID
-
-InFile=$InputPath/$FileName
+InFile=$DataPath/$FileName
 
 LATS=180
 LONS=360
@@ -53,32 +53,26 @@ xinc = XINC
 yfirst = YFIRST
 yinc = YINC
 EOF
-) > $InputPath/.grid
-sed -i "s/XSIZE/$XSIZE/g" $InputPath/.grid
-sed -i "s/YSIZE/$YSIZE/g" $InputPath/.grid
-sed -i "s/XFIRST/$XFIRST/g" $InputPath/.grid
-sed -i "s/YFIRST/$YFIRST/g" $InputPath/.grid
-sed -i "s/XINC/$XINC/g" $InputPath/.grid
-sed -i "s/YINC/$YINC/g" $InputPath/.grid
+) > $DataPath/.grid
+sed -i "s/XSIZE/$XSIZE/g" $DataPath/.grid
+sed -i "s/YSIZE/$YSIZE/g" $DataPath/.grid
+sed -i "s/XFIRST/$XFIRST/g" $DataPath/.grid
+sed -i "s/YFIRST/$YFIRST/g" $DataPath/.grid
+sed -i "s/XINC/$XINC/g" $DataPath/.grid
+sed -i "s/YINC/$YINC/g" $DataPath/.grid
 
-tmp=$InputPath/.tmp.nc
-cdo remapbil,$InputPath/.grid $InFile $tmp
+tmp=$DataPath/.tmp.nc
+cdo remapbil,$DataPath/.grid $InFile $tmp
 mv $tmp $InFile
 
-rm -f $InputPath/.grid
+rm -f $DataPath/.grid
 
 fi
 
-# Publish output data using OPeNDAP
-mkdir -p $OutputPath
-cp $InFile $OutputPath/ 2>&1 > /dev/null &
-
 # Create and publish UV-CDAT map
 source activate $UVCDATenv
-python $AbsWorkDir/precip_trend_analysis.py $AbsWorkDir $InputPath/ $LATS $LONS
+python $AbsWorkDir/precip_trend_analysis.py $AbsWorkDir $DataPath/ $LATS $LONS
 source deactivate
-
-cp $InputPath/precip_trend_analysis.png $OutputPath/
 
 exit 0
 

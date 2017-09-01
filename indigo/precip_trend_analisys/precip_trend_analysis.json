@@ -347,7 +347,7 @@
             "arguments": [
                 "force=yes",
                 "output_name=precip_trend_analysis",
-                "output_path=precip_trend_input/@{OPH_SESSION_CODE}/@{OPH_WORKFLOW_ID}"
+                "output_path=INDIGO/precip_trend_input/@{OPH_SESSION_CODE}/@{OPH_WORKFLOW_ID}"
             ],
             "dependencies": [
                 { "task": "Metadata update", "type": "single" }
