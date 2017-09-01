@@ -34,13 +34,13 @@ x.setcolormap(colormapname)
 iso = x.createisofill()
 
 number_different_colors = 64
-levels = numpy.arange(-3., 3.00001, 6. / float(number_different_colors + 1)).tolist()
+levels = numpy.arange(-1., 1.00001, 2. / float(number_different_colors + 1)).tolist()
 iso.levels = levels
 
 cols = vcs.getcolors(levels, split=0)
 
 iso.fillareacolors = cols
-iso.legend = vcs.mklabels(numpy.arange(-3, 3.01, .375))
+iso.legend = vcs.mklabels(numpy.arange(-1, 1.01, .125))
 
 # Now create a template to move things around a bit
 t = x.createtemplate()
