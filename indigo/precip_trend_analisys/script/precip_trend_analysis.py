@@ -16,9 +16,9 @@ DataDir = sys.argv[2]
 InFile = "/".join([DataDir, "precip_trend_analysis.nc"])
 OutFile = "/".join([DataDir, "precip_trend_analysis.png"])
 
-Lats = int(sys.argv[3])
+Lats = int(round(float(sys.argv[3]) + .5))
 
-Lons = int(sys.argv[4])
+Lons = int(round(float(sys.argv[4]) + .5))
 
 # Process file
 
