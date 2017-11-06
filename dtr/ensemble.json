@@ -1,0 +1,193 @@
+{
+	"name": "ensemble",
+	"author": "CMCC",
+	"abstract": "Usage: /path/ensemble.json measure file1.nc|file2.nc <ioserver>. ${1} is the measure name, ${2} is the list of (OPeNDAP URLs to) NC files to be analyzed; ${3} is I/O server type.",
+	"exec_mode": "sync",
+	"ncores": "1",
+	"on_exit":"oph_delete",
+	"tasks": [
+		{
+			"name": "Delete Work Container",
+			"operator": "oph_deletecontainer",
+			"arguments": [
+				"container=ensemble",
+				"hidden=no",
+				"delete_type=physical"
+			],
+			"on_error": "skip"
+		},
+		{
+			"name": "Create Work Container",
+			"operator": "oph_createcontainer",
+			"arguments": [
+				"container=ensemble",
+				"dim=lat|lon",
+				"dim_type=double|double",
+				"hierarchy=oph_base|oph_base",
+				"compressed=no",
+				"ncores=1"
+			],
+			"dependencies": [
+				{
+					"task": "Delete Work Container"
+				}
+			],
+			"on_error": "skip"
+		},
+		{
+			"name": "Loop",
+			"operator": "oph_for",
+			"arguments": [
+				"key=name_file",
+				"values=${2}",
+				"parallel=yes"
+			],
+			"dependencies": [
+				{
+					"task": "Create Work Container",
+					"type": "single"
+			}
+			]
+		},
+		{
+			"name": "Import",
+			"operator": "oph_importnc",
+			"arguments": [
+				"cwd=/",
+				"measure=${1}",
+				"src_path=@{name_file}",
+				"import_metadata=yes",
+				"nfrag=1",
+				"container=ensemble",
+				"grid=map",
+				"ioserver=${3}"
+			],
+			"dependencies": [
+				{
+					"task": "Loop",
+					"type": "single"
+				}
+			]
+		},
+		{
+			"name": "End loop",
+			"operator": "oph_endfor",
+			"arguments": [],
+			"dependencies": [
+				{
+					"task": "Import",
+					"type": "all"
+				}
+			]
+		},
+		{
+			"name": "Merging",
+			"operator": "oph_mergecubes2",
+			"arguments": [
+				"dim=new_dim"
+			],
+			"dependencies": [
+				{
+					"task": "End loop",
+					"type": "all",
+					"argument": "cubes"
+				}
+			]
+		},
+		{
+			"name": "Loop reduce",
+			"operator": "oph_for",
+			"arguments": [
+				"key=index",
+				"values=avg|min|max|var|std",
+				"parallel=yes"
+			],
+			"dependencies": [
+				{
+					"task": "Merging",
+					"type": "single"
+				}
+			]
+		},
+		{
+			"name": "Reducing",
+			"operator": "oph_reduce2",
+			"arguments": [
+				"operation=@{index}",
+				"dim=new_dim"
+			],
+			"dependencies": [
+				{
+					"task": "Loop reduce",
+					"type": "single"
+				}
+			]
+		},
+		{
+			"name": "Export",
+			"operator": "oph_exportnc2",
+			"arguments": [
+				"output_path=/public/data/DTR/@{OPH_SESSION_CODE}/@{OPH_WORKFLOW_ID}",
+				"output_name=@{index}"
+			],
+			"dependencies": [
+				{
+					"task": "Reducing",
+					"type": "single"
+				}
+			]
+		},
+		{
+			"name": "Post-processing",
+			"operator": "oph_script",
+			"arguments": [
+				"script=create_map",
+				"args=/public/data/DTR/@{OPH_SESSION_CODE}/@{OPH_WORKFLOW_ID} @{index} ${1}"
+			],
+			"dependencies": [
+				{
+					"task": "Export"
+				} 
+			]
+		},
+		{
+			"name": "End loop reduce",
+			"operator": "oph_endfor",
+			"arguments": [ ],
+			"dependencies": [
+				{
+					"task":"Post-processing"
+				}
+			]
+		},
+		{
+			"name": "Delete all cubes",
+			"operator": "oph_delete",
+			"arguments": [
+				"cube=[container=ensemble]"
+			],
+			"dependencies": [
+				{
+					"task": "End loop reduce"
+				}
+			],
+				"on_error": "skip"
+		},
+		{
+			"name": "Delete container",
+			"operator": "oph_deletecontainer",
+			"arguments": [
+				"container=ensemble",
+				"hidden=no",
+				"delete_type=physical"
+			],
+			"dependencies": [
+				{
+					"task": "Delete all cubes"
+				}
+			],
+			"on_error": "skip"
+		}
+	]
+}
+
