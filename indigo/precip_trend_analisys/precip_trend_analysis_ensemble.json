@@ -117,8 +117,8 @@
             "operator": "oph_exportnc2",
             "arguments": [
                 "force=yes",
-                "misc=yes",
-                "output_name=@{index}"
+                "output_name=@{index}",
+                "output_path=/INDIGO/precip_trend_output/@{OPH_SESSION_CODE}/@{OPH_WORKFLOW_ID}"
             ],
             "dependencies": [
                 {
