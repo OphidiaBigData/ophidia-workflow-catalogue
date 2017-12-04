@@ -1,7 +1,7 @@
 {
 	"name": "ensemble",
 	"author": "CMCC",
-	"abstract": "Usage: /path/ensemble.json measure file1.nc|file2.nc <ioserver>. ${1} is the measure name, ${2} is the list of (OPeNDAP URLs to) NC files to be analyzed; ${3} is I/O server type.",
+	"abstract": "Usage: /path/ensemble.json measure file1.nc|file2.nc <ioserver>. ${1} is the measure name, ${2} is the list of (OPeNDAP URLs to) NC files to be analyzed, ${3} is I/O server type.",
 	"exec_mode": "sync",
 	"ncores": "1",
 	"on_exit":"oph_delete",
@@ -190,4 +190,3 @@
 		}
 	]
 }
-

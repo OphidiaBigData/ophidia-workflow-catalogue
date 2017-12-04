@@ -1,7 +1,7 @@
 {
 	"name": "dtr anomaly", 
 	"author": "CMCC",
-	"abstract": "This workflow computes the anomaly of DTR (Diurnal Temperature Range) index with respect to past values. It works on two input files (tasmin/tasmax variable): $1 is ncores, $2 is the model, $3 is spatial filter (lat|lon ranges), $4 is the first time filter (historical), $5 is the second time filter (scenario), $6 is the grid of output map using the format r<lon>x<lat> (e.g. r360x180), i.e. a global regular lon/lat grid (this parameter is optional and by default the lon/lat grid of input file is adopted).",
+	"abstract": "This workflow computes the anomaly of DTR (Diurnal Temperature Range) index with respect to past values. It works on two input files (tasmin/tasmax variable): $1 is ncores, $2 is the model, $3 is spatial filter (lat|lon ranges), $4 is the first time filter (historical), $5 is the second time filter (scenario), $6 is the grid of output map using the format r<lon>x<lat> (e.g. r360x180), i.e. a global regular lon/lat grid (this parameter is optional and by default the lon/lat grid of input file is adopted), $7 is I/O server type (optional).",
 	"exec_mode": "sync",
 	"cwd": "/",
 	"ncores": "${1}",
@@ -47,7 +47,8 @@
 				"subset_dims=lat|lon|time",
 				"subset_filter=${3}|${5}",
 				"subset_type=coord",
-				"description=tasmax RCP"
+				"description=tasmax RCP",
+				"ioserver=${7}"
 			],
 			"dependencies": [
 				{ "task": "Create Work Container" }
@@ -68,7 +69,8 @@
 				"subset_dims=lat|lon|time",
 				"subset_filter=${3}|${5}",
 				"subset_type=coord",
-				"description=tasmin RCP"
+				"description=tasmin RCP",
+				"ioserver=${7}"
 			],
 			"dependencies": [
 				{ "task": "Create Work Container" }
@@ -89,7 +91,8 @@
 				"subset_dims=lat|lon|time",
 				"subset_filter=${3}|${4}",
 				"subset_type=coord",
-				"description=tasmax Historical"
+				"description=tasmax Historical",
+				"ioserver=${7}"
 			],
 			"dependencies": [
 				{ "task": "Create Work Container" }
@@ -110,7 +113,8 @@
 				"subset_dims=lat|lon|time",
 				"subset_filter=${3}|${4}",
 				"subset_type=coord",
-				"description=tasmin Historical"
+				"description=tasmin Historical",
+				"ioserver=${7}"
 			],
 			"dependencies": [
 				{ "task": "Create Work Container" }
