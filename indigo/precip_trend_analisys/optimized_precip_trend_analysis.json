@@ -332,7 +332,6 @@
                 "container=work"
             ],
             "dependencies": [
-                { "task": "Create Work Container"    },
                 { "task": "Linear regression Scenario", "argument": "cube", "type": "single" },
                 { "task": "Linear regression Historical", "argument": "cube2", "type": "single" }
             ]
