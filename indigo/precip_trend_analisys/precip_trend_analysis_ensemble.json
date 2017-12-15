@@ -4,7 +4,8 @@
     "abstract": "Usage: /path/precip_trend_analysis_ensemble.json file1.nc|file2.nc <ioserver>. ${1} is the list of (OPeNDAP URLs to) NC files to be analyzed; ${2} is I/O server type.",
     "exec_mode": "sync",
     "ncores": "1",
-    "on_exit":"oph_delete",
+    "on_exit": "oph_delete",
+    "host_partition": "test",
     "tasks": [
         {
             "name": "Delete Work Container",

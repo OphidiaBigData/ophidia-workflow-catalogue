@@ -4,7 +4,8 @@
 	"abstract": "Usage: /path/ensemble.json measure file1.nc|file2.nc <ioserver>. ${1} is the measure name, ${2} is the list of (OPeNDAP URLs to) NC files to be analyzed, ${3} is I/O server type.",
 	"exec_mode": "async",
 	"ncores": "1",
-	"on_exit":"oph_delete",
+	"on_exit": "oph_delete",
+    "host_partition": "test",
 	"tasks": [
 		{
 			"name": "Delete Work Container",
