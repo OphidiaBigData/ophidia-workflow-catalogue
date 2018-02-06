@@ -166,7 +166,7 @@
 		},
 		{
 			"name": "Pre-process",
-			"operator": "oph_subset2",
+			"operator": "oph_subset",
 			"arguments":
 			[
 				"subset_dims=time",
@@ -201,7 +201,7 @@
 		},
 		{
 			"name": "Extract year",
-			"operator": "oph_subset2",
+			"operator": "oph_subset",
 			"arguments":
 			[
 				"subset_dims=time",

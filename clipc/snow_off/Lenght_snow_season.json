@@ -1,285 +1,285 @@
 {
-    "name": "CLIPC_Lenght of snow season", 
-    "author": "CMCC",
-    "abstract": "Using this workflow it is possible to calculate the Lenght of snow season. Use the $1 as cubeid input parameter, $2 as nc export path, $3 as nc export file name, $4 as path of postproc script file",
-    "exec_mode": "async",
-    "cwd": "/",
-    "ncores": "7",
-    "on_exit": "oph_delete",
-    "tasks": [
-	{
-            "name": "Pre-processing1",
-            "operator": "oph_apply",
-            "arguments": [
-		"cube=$1",
-                "query=oph_predicate(oph_predicate(measure,'x-500','>0','-1','x'),'x','>0','1','-1')",
-		"measure_type=auto",
-		"description=Filtered"
-            ]
-        },
-	{
-           "name": "Pre-processing2",
-            "operator": "oph_apply",
-            "arguments": [
-                "query=oph_mul_array('oph_float|oph_float','oph_float',measure,oph_cast('oph_double','oph_float',dimension))",
-		"check_type=no",
-		"description=Merged measure and time dimension"
-            ],
-            "dependencies": [
-                { "task": "Pre-processing1", "type": "single" } 
-            ]
-        },
-	{
-            "name": "Pre-processing3",
-            "operator": "oph_apply",
-            "arguments": [
-                "query=oph_predicate(measure,'x','<0','NAN','x')",
-		"measure_type=auto",
-		"description=Masked"
-            ],
-	    "dependencies": [
-		{ "task": "Pre-processing2", "type": "single" }
-            ]
-        },
-	{
-            "name": "Loop on years",
-            "operator": "oph_for",
-            "arguments": [
-		"key=year",
-		"values=1979-07_1980-07|1980-07_1981-07|1981-07_1982-07|1982-07_1983-07|1983-07_1984-07|1984-07_1985-07|1985-07_1986-07|1986-07_1987-07|1987-07_1988-07|1988-07_1989-07|1989-07_1990-07|1990-07_1991-07|1991-07_1992-07|1992-07_1993-07|1993-07_1994-07|1994-07_1995-07|1995-07_1996-07|1996-07_1997-07|1997-07_1998-07|1998-07_1999-07|1999-07_2000-07|2000-07_2001-07|2001-07_2002-07|2002-07_2003-07|2003-07_2004-07|2004-07_2005-07|2005-07_2006-07|2006-07_2007-07|2007-07_2008-07|2008-07_2009-07|2009-07_2010-07|2010-07_2011-07|2011-07_2012-07",
-		"counter=3652,4018,4383,4748,5113,5479,5844,6209,6574,6940,7305,7670,8035,8401,8766,9131,9496,9862,10227,10592,10957,11323,11688,12053,12418,12784,13149,13514,13879,14245,14610,14975,15340",
-		"parallel=yes"
-            ],
-	    "dependencies": [
-		{ "task": "Pre-processing3", "type": "single" }
-            ]
-        },
-	{
-           "name": "Extract year",
-            "operator": "oph_subset2",
-            "arguments": [
-                "subset_dims=time",
-		"subset_filter=@{year}",
-		"description=Selection of year @{year}"
-            ],
-            "dependencies": [
-                { "task": "Loop on years", "type": "single" } 
-            ]
-        },
- 	{
-           "name": "Snow on",
-            "operator": "oph_reduce",
-            "arguments": [
-                "operation=min",
-		"description=Selection of Snow on for @{year}"
-            ],
-            "dependencies": [
-                { "task": "Extract year", "type": "single" } 
-            ]
-        },
-	{
-	    "name": "Post-processing on Snow on",
-            "operator": "oph_apply",
-            "arguments": [
-		"query=oph_predicate(measure,'x-&{year}','>0','x-&{year}','x-&{year}+365')",
-		"measure=Snow_on",
-		"measure_type=auto",
-		"description=Fix missing values for Snow on"
-            ],
-            "dependencies": [
-                { "task": "Snow on", "type": "single" }
-            ]
-        },
-	{
-	    "name": "Post-processing on Snow on 2",
-            "operator": "oph_apply",
-            "arguments": [
-		"query=oph_predicate(measure,'x','NAN','-99999','x')",
-		"measure=Snow_on",
-		"measure_type=auto",
-		"description=Fix missing values for Snow on"
-            ],
-            "dependencies": [
-                { "task": "Post-processing on Snow on", "type": "single" }
-            ]
-        },
-	{
-            "name": "Export Snow on to nc",
-            "operator": "oph_exportnc2",
-	    "arguments": [
-		"output_path=$2",
-		"output_name=SNOW_ON_@{year}_$3"
-            ],
-            "dependencies": [
-                { "task": "Post-processing on Snow on 2", "type": "single" }
-            ]
-        },
-	{
-            "name": "Postprocessing operations on file Snow on",
-            "operator": "oph_script",
-            "arguments": [
-                "script=$4/postprocess.sh",
-		"args=$2|SNOW_ON_@{year}_$3.nc|@{year}|Snow_on|1",
-		"ncores=1"
-            ],
-            "dependencies": [
-		{ "task": "Export Snow on to nc" }
-            ]
-        },
-	{
-            "name": "Postprocessing operations on file Snow on2",
-            "operator": "oph_script",
-            "arguments": [
-                "script=$4/postproc_attribute.sh",
-		"args=$2|SNOW_ON_@{year}_$3.nc|@{year}",
-		"ncores=1"
-            ],
-            "dependencies": [
-		{ "task": "Postprocessing operations on file Snow on" }
-            ]
-        },
-	{
-	    "name": "Snow off",
-            "operator": "oph_reduce",
-            "arguments": [
-                "operation=max",
-		"description=Selection of Snow off for @{year}"
-            ],
-            "dependencies": [
-                { "task": "Extract year", "type": "single" } 
-            ]
-	},
-	{
-	    "name": "Post-processing on Snow off",
-            "operator": "oph_apply",
-            "arguments": [
-		"query=oph_predicate(measure,'x-&{year}+1','>0','x-&{year}+1','x-&{year}+366')",
-		"measure=Snow_off",
-		"measure_type=auto",
-		"description=Fix missing values for Snow off"
-            ],
-            "dependencies": [
-                { "task": "Snow off", "type": "single" }
-            ]
-        },
-	{
-	    "name": "Post-processing on Snow off 2",
-            "operator": "oph_apply",
-            "arguments": [
-		"query=oph_predicate(measure,'x','NAN','-99999','x')",
-		"measure=Snow_off",
-		"measure_type=auto",
-		"description=Fix missing values for Snow off"
-            ],
-            "dependencies": [
-                { "task": "Post-processing on Snow off", "type": "single" }
-            ]
-        },
-	{
-            "name": "Export Snow off to nc",
-            "operator": "oph_exportnc2",
-	    "arguments": [
-		"output_path=$2",
-		"output_name=SNOW_OFF_@{year}_$3"
-            ],
-            "dependencies": [
-                { "task": "Post-processing on Snow off 2", "type": "single" }
-            ]
-        },
-	{
-            "name": "Postprocessing operations on file Snow off",
-            "operator": "oph_script",
-            "arguments": [
-                "script=$4/postprocess.sh",
-		"args=$2|SNOW_OFF_@{year}_$3.nc|@{year}|Snow_off|1",
-		"ncores=1"
-            ],
-            "dependencies": [
-		{ "task": "Export Snow off to nc" }
-            ]
-        },
-	{
-            "name": "Postprocessing operations on file Snow off2",
-            "operator": "oph_script",
-            "arguments": [
-                "script=$4/postproc_attribute.sh",
-		"args=$2|SNOW_OFF_@{year}_$3.nc|@{year}",
-		"ncores=1"
-            ],
-            "dependencies": [
-		{ "task": "Postprocessing operations on file Snow off" }
-            ]
-        },
- 	{
-	    "name": "Evaluate Max-Min",
-            "operator": "oph_intercube",
-            "arguments": [
-		"measure=Length",
-                "operation=sub",
-		"description=Length snow for @{year}"
-            ],
-            "dependencies": [
-                { "task": "Snow off", "type": "single" },
-		{ "task": "Snow on", "type": "single", "argument":"cube2" }
-            ]
-        },
-	{
-	    "name": "Post-processing on length",
-            "operator": "oph_apply",
-            "arguments": [
-		"query=oph_predicate(measure,'x','NAN','-99999','x+1')",
-		"measure_type=auto",
-		"description=Adjusted duration"
-            ],
-            "dependencies": [
-                { "task": "Evaluate Max-Min", "type": "single" }
-            ]
-        },
-        {
-            "name": "Export Length to nc",
-            "operator": "oph_exportnc2",
-	    "arguments": [
-		"output_path=$2",
-		"output_name=LENGTH_@{year}_$3"
-            ],
-            "dependencies": [
-                { "task": "Post-processing on length", "type": "single" }
-            ]
-        },
-	{
-            "name": "Postprocessing operations on file Length",
-            "operator": "oph_script",
-            "arguments": [
-                "script=$4/postprocess.sh",
-		"args=$2|LENGTH_@{year}_$3.nc|@{year}|Length|0",
-		"ncores=1"
-            ],
-            "dependencies": [
-		{ "task": "Export Length to nc" }
-            ]
-        },
-	{
-            "name": "Postprocessing operations on file Length2",
-            "operator": "oph_script",
-            "arguments": [
-                "script=$4/postproc_attribute.sh",
-		"args=$2|LENGTH_@{year}_$3.nc|@{year}",
-		"ncores=1"
-            ],
-            "dependencies": [
-		{ "task": "Postprocessing operations on file Length" }
-            ]
-        },
-	{
-            "name": "End loop",
-            "operator": "oph_endfor",
-            "arguments": [ ],
-	    "dependencies": [
-		{ "task": "Postprocessing operations on file Snow on2" },
-		{ "task": "Postprocessing operations on file Snow off2" },
-		{ "task": "Postprocessing operations on file Length2" }
-            ]
-        }
-    ]
+	"name": "CLIPC_Lenght of snow season", 
+	"author": "CMCC",
+	"abstract": "Using this workflow it is possible to calculate the Lenght of snow season. Use the $1 as cubeid input parameter, $2 as nc export path, $3 as nc export file name, $4 as path of postproc script file",
+	"exec_mode": "async",
+	"cwd": "/",
+	"ncores": "7",
+	"on_exit": "oph_delete",
+	"tasks": [
+		{
+			"name": "Pre-processing1",
+			"operator": "oph_apply",
+			"arguments": [
+				"cube=$1",
+				"query=oph_predicate(oph_predicate(measure,'x-500','>0','-1','x'),'x','>0','1','-1')",
+				"measure_type=auto",
+				"description=Filtered"
+			]
+		},
+		{
+			"name": "Pre-processing2",
+			"operator": "oph_apply",
+			"arguments": [
+				"query=oph_mul_array('oph_float|oph_float','oph_float',measure,oph_cast('oph_double','oph_float',dimension))",
+				"check_type=no",
+				"description=Merged measure and time dimension"
+			],
+			"dependencies": [
+				{ "task": "Pre-processing1", "type": "single" } 
+			]
+		},
+		{
+			"name": "Pre-processing3",
+			"operator": "oph_apply		",
+			"arguments": [
+				"query=oph_predicate(measure,'x','<0','NAN','x')",
+				"measure_type=auto",
+				"description=Masked"
+			],
+			"dependencies": [
+				{ "task": "Pre-processing2", "type": "single" }
+			]
+		},
+		{
+			"name": "Loop on years",
+			"operator": "oph_for",
+			"arguments": [
+				"key=year",
+				"values=1979-07_1980-07|1980-07_1981-07|1981-07_1982-07|1982-07_1983-07|1983-07_1984-07|1984-07_1985-07|1985-07_1986-07|1986-07_1987-07|1987-07_1988-07|1988-07_1989-07|1989-07_1990-07|1990-07_1991-07|1991-07_1992-07|1992-07_1993-07|1993-07_1994-07|1994-07_1995-07|1995-07_1996-07|1996-07_1997-07|1997-07_1998-07|1998-07_1999-07|1999-07_2000-07|2000-07_2001-07|2001-07_2002-07|2002-07_2003-07|2003-07_2004-07|2004-07_2005-07|2005-07_2006-07|2006-07_2007-07|2007-07_2008-07|2008-07_2009-07|2009-07_2010-07|2010-07_2011-07|2011-07_2012-07",
+				"counter=3652,4018,4383,4748,5113,5479,5844,6209,6574,6940,7305,7670,8035,8401,8766,9131,9496,9862,10227,10592,10957,11323,11688,12053,12418,12784,13149,13514,13879,14245,14610,14975,15340",
+				"parallel=yes"
+			],
+			"dependencies": [
+				{ "task": "Pre-processing3", "type": "single" }
+			]
+		},
+		{
+			"name": "Extract year",
+			"operator": "oph_subset",
+			"arguments": [
+				"subset_dims=time",
+				"subset_filter=@{year}",
+				"description=Selection of year @{year}"
+			],
+			"dependencies": [
+				{ "task": "Loop on years", "type": "single" } 
+			]
+		},
+		{
+			"name": "Snow on",
+			"operator": "oph_reduce",
+			"arguments": [
+				"operation=min",
+				"description=Selection of Snow on for @{year}"
+			],
+			"dependencies": [
+				{ "task": "Extract year", "type": "single" } 
+			]
+		},
+		{
+			"name": "Post-processing on Snow on",
+			"operator": "oph_apply",
+			"arguments": [
+				"query=oph_predicate(measure,'x-&{year}','>0','x-&{year}','x-&{year}+365')",
+				"measure=Snow_on",
+				"measure_type=auto",
+				"description=Fix missing values for Snow on"
+			],
+			"dependencies": [
+				{ "task": "Snow on", "type": "single" }
+			]
+		},
+		{
+			"name": "Post-processing on Snow on 2",
+			"operator": "oph_apply",
+			"arguments": [
+				"query=oph_predicate(measure,'x','NAN','-99999','x')",
+				"measure=Snow_on",
+				"measure_type=auto",
+				"description=Fix missing values for Snow on"
+			],
+			"dependencies": [
+				{ "task": "Post-processing on Snow on", "type": "single" }
+			]
+		},
+		{
+			"name": "Export Snow on to nc",
+			"operator": "oph_exportnc2",
+			"arguments": [
+				"output_path=$2",
+				"output_name=SNOW_ON_@{year}_$3"
+			],
+			"dependencies": [
+				{ "task": "Post-processing on Snow on 2", "type": "single" }
+			]
+		},
+		{
+			"name": "Postprocessing operations on file Snow on",
+			"operator": "oph_script",
+			"arguments": [
+				"script=$4/postprocess.sh",
+				"args=$2|SNOW_ON_@{year}_$3.nc|@{year}|Snow_on|1",
+				"ncores=1"
+			],
+			"dependencies": [
+				{ "task": "Export Snow on to nc" }
+			]
+		},
+		{
+			"name": "Postprocessing operations on file Snow on2",
+			"operator": "oph_script",
+			"arguments": [
+				"script=$4/postproc_attribute.sh",
+				"args=$2|SNOW_ON_@{year}_$3.nc|@{year}",
+				"ncores=1"
+			],
+			"dependencies": [
+				{ "task": "Postprocessing operations on file Snow on" }
+			]
+		},
+		{
+			"name": "Snow off",
+			"operator": "oph_reduce",
+			"arguments": [
+				"operation=max",
+				"description=Selection of Snow off for @{year}"
+			],
+			"dependencies": [
+				{ "task": "Extract year", "type": "single" } 
+			]
+		},
+		{
+			"name": "Post-processing on Snow off",
+			"operator": "oph_apply",
+			"arguments": [
+				"query=oph_predicate(measure,'x-&{year}+1','>0','x-&{year}+1','x-&{year}+366')",
+				"measure=Snow_off",
+				"measure_type=auto",
+				"description=Fix missing values for Snow off"
+			],
+			"dependencies": [
+				{ "task": "Snow off", "type": "single" }
+			]
+		},
+		{
+			"name": "Post-processing on Snow off 2",
+			"operator": "oph_apply",
+			"arguments": [
+				"query=oph_predicate(measure,'x','NAN','-99999','x')",
+				"measure=Snow_off",
+				"measure_type=auto",
+				"description=Fix missing values for Snow off"
+			],
+			"dependencies": [
+				{ "task": "Post-processing on Snow off", "type": "single" }
+			]
+		},
+		{
+			"name": "Export Snow off to nc",
+			"operator": "oph_exportnc2",
+			"arguments": [
+				"output_path=$2",
+				"output_name=SNOW_OFF_@{year}_$3"
+			],
+			"dependencies": [
+				{ "task": "Post-processing on Snow off 2", "type": "single" }
+			]
+		},
+		{
+			"name": "Postprocessing operations on file Snow off",
+			"operator": "oph_script",
+			"arguments": [
+				"script=$4/postprocess.sh",
+				"args=$2|SNOW_OFF_@{year}_$3.nc|@{year}|Snow_off|1",
+				"ncores=1"
+			],
+			"dependencies": [
+				{ "task": "Export Snow off to nc" }
+			]
+		},
+		{
+			"name": "Postprocessing operations on file Snow off2",
+			"operator": "oph_script",
+			"arguments": [
+				"script=$4/postproc_attribute.sh",
+				"args=$2|SNOW_OFF_@{year}_$3.nc|@{year}",
+				"ncores=1"
+			],
+			"dependencies": [
+				{ "task": "Postprocessing operations on file Snow off" }
+			]
+		},
+		{
+			"name": "Evaluate Max-Min",
+			"operator": "oph_intercube",
+			"arguments": [
+				"measure=Length",
+				"operation=sub",
+				"description=Length snow for @{year}"
+			],
+			"dependencies": [
+				{ "task": "Snow off", "type": "single" },
+				{ "task": "Snow on", "type": "single", "argument":"cube2" }
+			]
+		},
+		{
+			"name": "Post-processing on length",
+			"operator": "oph_apply",
+			"arguments": [
+				"query=oph_predicate(measure,'x','NAN','-99999','x+1')",
+				"measure_type=auto",
+				"description=Adjusted duration"
+			],
+			"dependencies": [
+				{ "task": "Evaluate Max-Min", "type": "single" }
+			]
+		},
+		{
+			"name": "Export Length to nc",
+			"operator": "oph_exportnc2",
+			"arguments": [
+				"output_path=$2",
+				"output_name=LENGTH_@{year}_$3"
+			],
+			"dependencies": [
+				{ "task": "Post-processing on length", "type": "single" }
+			]
+		},
+		{
+			"name": "Postprocessing operations on file Length",
+			"operator": "oph_script",
+			"arguments": [
+				"script=$4/postprocess.sh",
+				"args=$2|LENGTH_@{year}_$3.nc|@{year}|Length|0",
+				"ncores=1"
+			],
+			"dependencies": [
+				{ "task": "Export Length to nc" }
+			]
+		},
+		{
+			"name": "Postprocessing operations on file Length2",
+			"operator": "oph_script",
+			"arguments": [
+				"script=$4/postproc_attribute.sh",
+				"args=$2|LENGTH_@{year}_$3.nc|@{year}",
+				"ncores=1"
+			],
+			"dependencies": [
+				{ "task": "Postprocessing operations on file Length" }
+			]
+		},
+		{
+			"name": "End loop",
+			"operator": "oph_endfor",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Postprocessing operations on file Snow on2" },
+				{ "task": "Postprocessing operations on file Snow off2" },
+				{ "task": "Postprocessing operations on file Length2" }
+			]
+		}
+	]
 }
 

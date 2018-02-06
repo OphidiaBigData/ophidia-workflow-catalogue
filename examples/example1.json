@@ -10,7 +10,7 @@
 	[
 		{
 			"name": "Subset",
-			"operator": "oph_subset2",
+			"operator": "oph_subset",
 			"arguments":
 			[
 				"cube=$1",
