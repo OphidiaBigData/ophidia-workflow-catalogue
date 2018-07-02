@@ -9,7 +9,7 @@
     "tasks": [
 	{
             "name": "Import",
-            "operator": "oph_importnc3",
+            "operator": "oph_importnc",
             "arguments": [
 		"src_path=$1",
 		"nfrag=10",
