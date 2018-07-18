@@ -1,0 +1,59 @@
+{
+    "name": "precipitation_trend_analysis",
+    "author": "CMCC Foundation",
+    "abstract": "Workflow used to evaluate precipitation trends related to a given scenarios. ${1} is ncores, ${2} is the PID of input cube to be processed, ${3} is a mark used by parent workflow to recognize output cube, ${4} is the percentile (e.g. 0.9).",
+    "exec_mode": "sync",
+    "ncores": "${1}",
+    "on_exit": "oph_delete",
+    "host_partition": "test",
+    "tasks": [
+        {
+            "name": "Subset JJA",
+            "operator": "oph_subset",
+            "arguments": [
+                "subset_dims=time",
+                "subset_type=coord",
+                "subset_filter=JJA",
+                "cube=${2}"
+            ]
+        },
+        {
+            "name": "90th percentile JJA",
+            "operator": "oph_reduce2",
+            "arguments": [
+                "operation=quantile",
+                "dim=time",
+                "concept_level=y",
+                "order=${4}"
+            ],
+            "dependencies": [
+                { "task": "Subset JJA", "type": "single" }
+            ]
+        },
+        {
+            "name": "Linear regression",
+            "operator": "oph_apply",
+            "arguments": [
+                "query=oph_gsl_fit_linear_coeff(measure)",
+                "measure_type=auto"
+            ],
+            "dependencies": [
+                { "task": "90th percentile JJA", "type": "single" }
+            ],
+            "on_exit": "nop"
+        },
+        {
+            "name": "Metadata update",
+            "operator": "oph_metadata",
+            "arguments": [
+                "mode=insert",
+                "metadata_key=Type",
+                "metadata_value=${3}"
+            ],
+            "dependencies": [
+                { "task": "Linear regression", "type": "single" }
+            ]
+        }
+    ]
+}
+
