@@ -14,7 +14,7 @@ cube.Cube.setclient(read_env=True)
 # In[ ]:
 
 mycube = cube.Cube.importnc(src_path='/public/data/tos_O1_2001-2002.nc',measure='tos',imp_dim='time',ncores=5)
-mycube2 = mycube.subset2(subset_dims="lat|lon|time",subset_filter="-30:30|30:120|0:30",ncores=5)
+mycube2 = mycube.subset2(subset_dims="lat|lon|time",subset_filter="-80:30|30:120|0:30",ncores=5)
 mycube3 = mycube2.reduce(operation='max',ncores=5)
 mycube4 = mycube3.rollup()
 data = mycube4.export_array()
@@ -43,7 +43,7 @@ map.drawmeridians(np.arange(-180,180,30),labels=[0,0,0,1])
 
 x, y = map(*np.meshgrid(lon,lat))
 
-cnplot = map.contourf(x,y,var,np.arange(290,305,0.5),cmap=plt.cm.jet)
+cnplot = map.contourf(x,y,var,np.arange(273,305,0.5),cmap=plt.cm.jet)
 cbar = map.colorbar(cnplot,location='right',format='%.6f')
 
 plt.title('Sea Surface Temperature (deg K)')

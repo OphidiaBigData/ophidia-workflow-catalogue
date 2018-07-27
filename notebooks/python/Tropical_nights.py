@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # This notebook computes the Tropical Nights index: starting from the daily minimum temperature (2096-2100) TN,
-# the Tropical Nights index is the number of days where TN > T (T is  a reference temperature, e.g. 20°C)
+# the Tropical Nights index is the number of days where TN > T (T is  a reference temperature, e.g. 20 °C)
 
 # Connect to the remote Ophidia instance
 
@@ -76,7 +76,7 @@ map.drawmeridians(np.arange(-180,180,30),labels=[0,0,0,1])
 
 x, y = map(*np.meshgrid(lon,lat))
 
-clevs = np.arange(0,371,10)
+clevs = np.arange(0,371,5)
 
 cnplot = map.contourf(x,y,var,clevs,cmap=plt.cm.jet)
 cbar = map.colorbar(cnplot,location='right')
