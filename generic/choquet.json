@@ -1,0 +1,196 @@
+{
+	"name": "Choquet integral", 
+	"author": "CMCC",
+	"abstract": "This workflow evaluates Choquet integral of two maps (depending on coordinates x and y). Arguments: $1 is ncores, $2 and $3 are the paths to files to be processed, $4 and $5 are the corresponding measure names, $6 is the output path.",
+	"exec_mode": "sync",
+	"ncores": "${1}",
+	"on_exit": "oph_delete",
+	"tasks":
+	[
+		{
+			"name": "Init",
+			"operator": "oph_set",
+			"arguments": [
+				"key=missingvalue|weight1|weight2|weightAll|ioserver",
+				"value=-3.4028235e+38|26.25|70|100|mysql_table"
+			]
+		},
+		{
+			"name": "Work Container",
+			"operator": "oph_createcontainer",
+			"arguments": [
+				"container=work",
+				"dim=x|y",
+				"dim_type=float|float",
+				"hierarchy=oph_base|oph_base",
+				"compressed=no",
+				"ncores=1"
+			],
+			"on_error": "skip"
+		},
+		{
+			"name": "Import 1",
+			"operator": "oph_importnc",
+			"arguments": [ 
+				"src_path=${2}",
+				"measure=${4}",
+				"imp_dim=x",
+				"description=File: ${2}",
+				"ioserver=@{ioserver}"
+			],
+			"dependencies": [
+				{ "task": "Init" }
+			]
+		},
+		{
+			"name": "Import 2",
+			"operator": "oph_importnc",
+			"arguments": [ 
+				"src_path=${3}",
+				"measure=${5}",
+				"imp_dim=x",
+				"description=File: ${3}",
+				"ioserver=@{ioserver}"
+			],
+			"dependencies": [
+				{ "task": "Init" }
+			]
+		},
+		{
+			"name": "Minimum values",
+			"operator": "oph_intercube",
+			"arguments": [ 
+				"operation=min",
+				"description=x1 (min)",
+				"container=work",
+				"missingvalue=@missingvalue",
+				"measure=x1"
+			],
+			"dependencies": [
+				{ "task": "Work Container" },
+				{ "task": "Import 1", "type": "single" },
+				{ "task": "Import 2", "type": "single", "argument": "cube2" }
+			]
+		},
+		{
+			"name": "Maximum values",
+			"operator": "oph_intercube",
+			"arguments": [ 
+				"operation=max",
+				"description=x2 (max)",
+				"container=work",
+				"missingvalue=@missingvalue",
+				"measure=x2"
+			],
+			"dependencies": [
+				{ "task": "Work Container" },
+				{ "task": "Import 1", "type": "single" },
+				{ "task": "Import 2", "type": "single", "argument": "cube2" }
+			]
+		},
+		{
+			"name": "Arguments related to maximum values",
+			"operator": "oph_intercube",
+			"arguments": [ 
+				"operation=arg_max",
+				"description=argmax",
+				"container=work",
+				"missingvalue=@missingvalue",
+				"measure=argmax"
+			],
+			"dependencies": [
+				{ "task": "Work Container" },
+				{ "task": "Import 1", "type": "single" },
+				{ "task": "Import 2", "type": "single", "argument": "cube2" }
+			]
+		},
+		{
+			"name": "Difference between Maximum and Minimum values",
+			"operator": "oph_intercube",
+			"arguments": [ 
+				"operation=sub",
+				"description=x2 - x1",
+				"missingvalue=@missingvalue",
+				"measure=Dx"
+			],
+			"dependencies": [
+				{ "task": "Maximum values", "type": "single" },
+				{ "task": "Minimum values", "type": "single", "argument": "cube2" }
+			]
+		},
+		{
+			"name": "Weigth of the second component",
+			"operator": "oph_apply",
+			"arguments": [ 
+				"query=oph_predicate(measure, 'x-1', '0', '@{weight1}', '@{weight2}')",
+				"measure_type=auto",
+				"description=mu(A2)"
+			],
+			"dependencies": [
+				{ "task": "Arguments related to maximum values", "type": "single" }
+			]
+		},
+		{
+			"name": "First component",
+			"operator": "oph_apply",
+			"arguments": [ 
+				"query=oph_mul_scalar(measure, @{weightAll})",
+				"measure_type=auto",
+				"description=x1 * mu(A1)"
+			],
+			"dependencies": [
+				{ "task": "Minimum values", "type": "single" }
+			]
+		},
+		{
+			"name": "Second component",
+			"operator": "oph_intercube",
+			"arguments": [ 
+				"operation=mul",
+				"description=(x2 - x1) * mu(A2)",
+				"missingvalue=@missingvalue",
+				"measure=weighted_Dx"
+			],
+			"dependencies": [
+				{ "task": "Difference between Maximum and Minimum values", "type": "single" },
+				{ "task": "Weigth of the second component", "type": "single", "argument": "cube2" }
+			]
+		},
+		{
+			"name": "Integral",
+			"operator": "oph_intercube",
+			"arguments": [ 
+				"operation=sum",
+				"description=H",
+				"missingvalue=@missingvalue",
+				"measure=H"
+			],
+			"dependencies": [
+				{ "task": "First component", "type": "single" },
+				{ "task": "Second component", "type": "single", "argument": "cube2" }
+			]
+		},
+		{
+			"name": "Export",
+			"operator": "oph_exportnc2",
+			"arguments": [
+				"output_path=${6}",
+				"force=yes"
+			],
+			"dependencies": [
+				{ "task": "Integral", "type": "single" }
+			]
+		},
+		{
+			"name": "Post-process",
+			"operator": "oph_script",
+			"arguments": [
+				"script=choquet_postprocess.sh",
+				"args=${2}|${6}/H.nc"
+			],
+			"dependencies": [
+				{ "task": "Export" }
+			]
+		}		
+	]
+}
