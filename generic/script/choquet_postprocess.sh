@@ -30,5 +30,8 @@ if [ $? -ne 0 ]; then
         exit 1
 fi
 
+# Translation to ASC format
+gdal_translate -of AAIGrid $output_file $output_file.asc
+
 exit 0
 
