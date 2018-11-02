@@ -63,7 +63,7 @@
 				"operation=min",
 				"description=x1 (min)",
 				"container=work",
-				"missingvalue=@missingvalue",
+				"missingvalue=@{missingvalue_1}",
 				"measure=x1"
 			],
 			"dependencies": [
@@ -79,7 +79,7 @@
 				"operation=max",
 				"description=x2 (max)",
 				"container=work",
-				"missingvalue=@missingvalue",
+				"missingvalue=@{missingvalue_1}",
 				"measure=x2"
 			],
 			"dependencies": [
@@ -95,7 +95,7 @@
 				"operation=arg_max",
 				"description=argmax",
 				"container=work",
-				"missingvalue=@missingvalue",
+				"missingvalue=@{missingvalue_1}",
 				"measure=argmax"
 			],
 			"dependencies": [
@@ -110,7 +110,7 @@
 			"arguments": [ 
 				"operation=sub",
 				"description=x2 - x1",
-				"missingvalue=@missingvalue",
+				"missingvalue=@{missingvalue_1}",
 				"measure=Dx"
 			],
 			"dependencies": [
@@ -122,7 +122,7 @@
 			"name": "Weigth of the second component",
 			"operator": "oph_apply",
 			"arguments": [ 
-				"query=oph_predicate(measure, 'x-1', '0', '@{weight1}', '@{weight2}')",
+				"query=oph_predicate(measure, 'x', '<0', '@{missingvalue_1}', '(2 - x) * @{weight1} + (x - 1) * @{weight2}')",
 				"measure_type=auto",
 				"description=mu(A2)"
 			],
@@ -134,7 +134,7 @@
 			"name": "First component",
 			"operator": "oph_apply",
 			"arguments": [ 
-				"query=oph_mul_scalar(measure, @{weightAll})",
+				"query=oph_mul_scalar(measure, @{weightAll}, @{missingvalue_1})",
 				"measure_type=auto",
 				"description=x1 * mu(A1)"
 			],
@@ -148,7 +148,7 @@
 			"arguments": [ 
 				"operation=mul",
 				"description=(x2 - x1) * mu(A2)",
-				"missingvalue=@missingvalue",
+				"missingvalue=@{missingvalue_1}",
 				"measure=weighted_Dx"
 			],
 			"dependencies": [
@@ -162,7 +162,7 @@
 			"arguments": [ 
 				"operation=sum",
 				"description=H",
-				"missingvalue=@missingvalue",
+				"missingvalue=@{missingvalue_1}",
 				"measure=H"
 			],
 			"dependencies": [
