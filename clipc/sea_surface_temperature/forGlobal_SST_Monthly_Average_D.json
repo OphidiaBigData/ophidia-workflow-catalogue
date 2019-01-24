@@ -351,9 +351,7 @@
 			"name": "Delete Work Container",
 			"operator": "oph_deletecontainer",
 			"arguments": [
-				"container=work",
-				"hidden=no",
-				"delete_type=physical"
+				"container=work"
 			],
 			"dependencies": [
 				{ "task": "Delete pre-processed data" },

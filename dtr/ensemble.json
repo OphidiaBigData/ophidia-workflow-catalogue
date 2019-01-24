@@ -11,9 +11,7 @@
 			"name": "Delete Work Container",
 			"operator": "oph_deletecontainer",
 			"arguments": [
-				"container=ensemble",
-				"hidden=no",
-				"delete_type=physical"
+				"container=ensemble"
 			],
 			"on_error": "skip"
 		},
@@ -178,9 +176,7 @@
 			"name": "Delete container",
 			"operator": "oph_deletecontainer",
 			"arguments": [
-				"container=ensemble",
-				"hidden=no",
-				"delete_type=physical"
+				"container=ensemble"
 			],
 			"dependencies": [
 				{

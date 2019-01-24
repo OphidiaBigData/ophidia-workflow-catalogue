@@ -98,8 +98,6 @@
 			"arguments":
 			[
 				"container=test",
-				"delete_type=physical",
-				"hidden=no",
 				"vocabulary=CF",
 				"ncores=1"
 			],
