@@ -6,7 +6,7 @@
 	"cwd": "/",
 	"ncores": "${1}",
 	"on_exit": "oph_delete",
-	"host_partition": "test",
+	"host_partition": "auto",
 	"tasks":
 	[
 		{
