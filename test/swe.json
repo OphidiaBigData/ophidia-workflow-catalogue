@@ -1,0 +1,140 @@
+{
+    "name": "CLIPC_SWE_monthly_average", 
+    "author": "CMCC",
+    "abstract": "Using this workflow it is possible to calculate the SWE_Long-term-monthly-average. Use the $1 as cubeid input parameter, $2 as nc export path, $3 as nc export file name, $4 as postproc script file path",
+    "exec_mode": "async",
+    "cwd": "/",
+    "ncores": "7",
+    "on_exit": "oph_delete",
+    "tasks": [
+		{
+			"name": "Filter1",
+			"operator": "oph_apply",
+			"arguments": [
+				"cube=$1",
+				"query=oph_predicate(measure,'x-500','>0','NAN','x')",
+				"measure_type=auto",
+				"description=Filtered"
+		    ]
+		},
+		{
+			"name": "Filter2",
+			"operator": "oph_apply",
+			"arguments": [
+				"query=oph_expand(measure,dimension,NULL,30.4375)",
+				"measure_type=auto",
+				"dim_query=oph_expand(dimension,dimension,NULL,30.4375,NULL,'interp')",
+				"dim_type=auto",
+				"description=Filled"
+			],
+			"dependencies": [
+				{ "task": "Filter1", "type": "single" }
+			]
+		},
+		{
+			"name": "Loop on months",
+			"operator": "oph_for",
+			"arguments": [
+				"key=index",
+				"counter=1:12",
+				"values=Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep",
+				"parallel=yes"
+			],
+			"dependencies": [
+				{ "task": "Filter2", "type": "single" }
+			]
+		},
+		{
+			"name": "Extract months",
+			"operator": "oph_subset",
+			"arguments": [
+				"subset_dims=time",
+				"subset_filter=&index:12:end",
+				"description=Data related to mounth @index"
+			],
+			"dependencies": [
+				{ "task": "Loop on months", "type": "single" }
+			]
+		},
+		{
+			"name": "Evaluate average",
+			"operator": "oph_reduce2",
+			"arguments": [
+				"operation=avg",
+				"dim=time",
+				"description=Average of data related to @index"
+			],
+			"dependencies": [
+				{ "task": "Extract months", "type": "single"}
+			]
+		},
+		{
+			"name": "Filter3",
+			"operator": "oph_apply",
+			"arguments": [
+				"query=oph_predicate(measure,'x','<=0','-99999','x')",
+				"measure_type=auto",
+				"description=Post-filtered1 data (@{index})"
+			],
+			"dependencies": [
+				{ "task": "Evaluate average", "type": "single" }
+			]
+		},
+		{
+			"name": "Filter4",
+			"operator": "oph_apply",
+			"arguments": [
+				"query=oph_predicate(measure,'x','NAN','-99999','x')",
+				"measure_type=auto",
+				"description=Post-filtered2 data (@{index})"
+			],
+			"dependencies": [
+				{ "task": "Filter3", "type": "single"}
+			]
+		},
+		{
+			"name": "Export to nc",
+			"operator": "oph_exportnc2",
+			"arguments": [
+				"output_path=$2",
+				"output_name=SWE_AVG_@{index}_$3"
+			],
+			"dependencies": [
+				{ "task": "Filter4", "type": "single" }
+			]
+		},
+		{
+			"name": "Postprocessing operations",
+			"operator": "oph_script",
+			"arguments": [
+				"script=$4/postproc_monthly.sh",
+				"args=$2|SWE_AVG_@{index}_$3.nc|@{index}",
+				"ncores=1"
+			],
+			"dependencies": [
+				{ "task": "Export to nc", "type": "single" }
+			]
+		},
+		{
+			"name": "Postprocessing operations2",
+			"operator": "oph_script",
+			"arguments": [
+				"script=$4/postproc_attribute.sh",
+				"args=$2|SWE_AVG_@{index}_$3.nc",
+				"ncores=1"
+			],
+			"dependencies": [
+				{ "task": "Postprocessing operations", "type": "single" }
+			]
+		},
+			{
+			"name": "End loop",
+			"operator": "oph_endfor",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Postprocessing operations2", "type": "single" }
+			]
+		}
+    ]
+}
+
