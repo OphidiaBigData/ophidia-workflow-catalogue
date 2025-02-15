@@ -1,0 +1,311 @@
+{
+	"name": "dtr anomaly", 
+	"author": "CMCC",
+	"abstract": "This workflow computes the anomaly of DTR (Diurnal Temperature Range) index with respect to past values. It works on two input files (tasmin/tasmax variable): $1 is ncores, $2 is the model, $3 is spatial filter (lat|lon ranges), $4 is the first time filter (historical), $5 is the second time filter (scenario), $6 is the grid of output map using the format r<lon>x<lat> (e.g. r360x180), i.e. a global regular lon/lat grid (this parameter is optional and by default the lon/lat grid of input file is adopted), $7 is I/O server type (optional).",
+	"exec_mode": "async",
+	"cwd": "/",
+	"ncores": "${1}",
+	"on_exit": "oph_delete",
+	"tasks":
+	[
+		{
+			"name": "Init",
+			"operator": "oph_set",
+			"arguments": [
+				"key=missingvalue",
+				"value=1.e+20"
+			]
+		},
+		{
+			"name": "Create Work Container",
+			"operator": "oph_createcontainer",
+			"arguments": [
+				"container=dtr",
+				"dim=lat|lon|time",
+				"dim_type=double|double|double",
+				"hierarchy=oph_base|oph_base|oph_time",
+				"compressed=no",
+				"ncores=1",
+				"base_time=1850-01-01 00:00:00",
+				"calendar=standard",
+				"units=s"
+			],
+			"on_error": "skip"
+		},
+		{
+			"name": "Import TX RCP",
+			"operator": "oph_importnc",
+			"arguments":
+			[ 
+				"src_path=/data/cmip5/${2}/rcp85/day/tasmax/tasmax_day_${2}_rcp85_r1i1p1.nc",
+				"measure=tasmax",
+				"base_time=1850-01-01 00:00:00",
+				"units=d",
+				"imp_concept_level=d",
+				"imp_dim=time",
+				"container=dtr",
+				"subset_dims=lat|lon|time",
+				"subset_filter=${3}|${5}",
+				"subset_type=coord",
+				"description=tasmax RCP",
+				"ioserver=${7}"
+			],
+			"dependencies": [
+				{ "task": "Create Work Container" }
+			]
+		},
+		{
+			"name": "Import TN RCP",
+			"operator": "oph_importnc",
+			"arguments":
+			[ 
+				"src_path=/data/cmip5/${2}/rcp85/day/tasmin/tasmin_day_${2}_rcp85_r1i1p1.nc",
+				"measure=tasmin",
+				"base_time=1850-01-01 00:00:00",
+				"units=d",
+				"imp_concept_level=d",
+				"imp_dim=time",
+				"container=dtr",
+				"subset_dims=lat|lon|time",
+				"subset_filter=${3}|${5}",
+				"subset_type=coord",
+				"description=tasmin RCP",
+				"ioserver=${7}"
+			],
+			"dependencies": [
+				{ "task": "Create Work Container" }
+			]
+		},
+		{
+			"name": "Import TX Historical",
+			"operator": "oph_importnc",
+			"arguments":
+			[ 
+				"src_path=/data/cmip5/${2}/historical/day/tasmax/tasmax_day_${2}_historical_r1i1p1.nc",
+				"measure=tasmax",
+				"base_time=1850-01-01 00:00:00",
+				"units=d",
+				"imp_concept_level=d",
+				"imp_dim=time",
+				"container=dtr",
+				"subset_dims=lat|lon|time",
+				"subset_filter=${3}|${4}",
+				"subset_type=coord",
+				"description=tasmax Historical",
+				"ioserver=${7}"
+			],
+			"dependencies": [
+				{ "task": "Create Work Container" }
+			]
+		},
+		{
+			"name": "Import TN Historical",
+			"operator": "oph_importnc",
+			"arguments":
+			[ 
+				"src_path=/data/cmip5/${2}/historical/day/tasmin/tasmin_day_${2}_historical_r1i1p1.nc",
+				"measure=tasmin",
+				"base_time=1850-01-01 00:00:00",
+				"units=d",
+				"imp_concept_level=d",
+				"imp_dim=time",
+				"container=dtr",
+				"subset_dims=lat|lon|time",
+				"subset_filter=${3}|${4}",
+				"subset_type=coord",
+				"description=tasmin Historical",
+				"ioserver=${7}"
+			],
+			"dependencies": [
+				{ "task": "Create Work Container" }
+			]
+		},
+		{
+			"name": "Evaluate DTR RCP",
+			"operator": "oph_intercube",
+			"arguments": [
+				"measure=DTR",
+				"description=Daily temperature range",
+				"missingvalue=@missingvalue"
+			],
+			"dependencies": [
+				{ "task": "Init" },
+				{ "task": "Import TX RCP", "type": "single" },
+				{ "task": "Import TN RCP", "type": "single", "argument": "cube2" }
+			]
+		},
+		{
+			"name": "Evaluate DTR Historical",
+			"operator": "oph_intercube",
+			"arguments": [
+				"measure=DTR",
+				"description=Daily temperature range",
+				"missingvalue=@missingvalue"
+			],
+			"dependencies": [
+				{ "task": "Init" },
+				{ "task": "Import TX Historical", "type": "single" },
+				{ "task": "Import TN Historical", "type": "single", "argument":"cube2" }
+			]
+		},
+		{
+			"name": "Time reduction RCP",
+			"operator": "oph_reduce2",
+			"arguments":
+			[
+				"operation=avg",
+				"dim=time",
+				"concept_level=M",
+				"description=Monthly Averages RCP",
+				"missingvalue=@{missingvalue}"
+			],
+			"dependencies": [
+				{ "task": "Evaluate DTR RCP", "type": "single" }
+			]
+		},
+		{
+			"name": "Time reduction Historical",
+			"operator": "oph_reduce2",
+			"arguments":
+			[
+				"operation=avg",
+				"dim=time",
+				"concept_level=M",
+				"description=Monthly Averages Historical",
+				"missingvalue=@{missingvalue}"
+			],
+			"dependencies": [
+				{ "task": "Evaluate DTR Historical", "type": "single" }
+			]
+		},
+		{
+			"name": "Loop on months",
+			"operator": "oph_for",
+			"arguments": [
+				"key=month",
+				"counter=1:12",
+				"parallel=yes"
+			],
+			"dependencies": [
+				{ "task": "Time reduction RCP" },
+				{ "task": "Time reduction Historical" }
+			]
+		},
+		{
+			"name": "Extract month RCP",
+			"operator": "oph_subset",
+			"arguments":
+			[
+				"subset_dims=time",
+				"subset_filter=@{month}:12:end",
+				"description=Month #@{month} RCP"
+			],
+			"dependencies": [
+				{ "task": "Time reduction RCP", "type": "single" },
+				{ "task": "Loop on months" }
+			]
+		},
+		{
+			"name": "Extract month Historical",
+			"operator": "oph_subset",
+			"arguments": [
+				"subset_dims=time",
+				"subset_filter=@{month}:12:end",
+				"description=Month #@{month} Historical"
+			],
+			"dependencies": [
+				{ "task": "Time reduction Historical", "type": "single" },
+				{ "task": "Loop on months" }
+			]
+		},
+		{
+			"name": "Evaluate climatological average Historical",
+			"operator": "oph_apply",
+			"arguments": [
+				"query=oph_extend(oph_reduce(measure,'oph_avg',0,2,@{missingvalue}),oph_count_array(measure))",
+				"measure_type=auto",
+				"description=Long-term Average for month #@{month}"
+			],
+			"dependencies": [
+				{ "task": "Extract month Historical", "type": "single" }
+			]
+		},
+		{
+			"name": "Evaluate Anomaly",
+			"operator": "oph_intercube",
+			"arguments": [
+				"measure=dtr_anomaly",
+				"description=Anomaly for month #@{month}",
+				"missingvalue=@{missingvalue}"
+			],
+			"dependencies": [
+				{ "task": "Extract month RCP", "type": "single" },
+				{ "task": "Evaluate climatological average Historical", "type": "single", "argument":"cube2" }
+			]
+		},
+		{
+			"name": "End loop on months",
+			"operator": "oph_endfor",
+			"arguments": [ ],
+			"dependencies": [
+				{ "task": "Evaluate Anomaly", "type": "all" }
+			]
+		},
+		{
+			"name": "Merging",
+			"operator": "oph_mergecubes",
+			"arguments": [
+				"description=Dataset of Monthly Anomalies"
+			],
+			"dependencies": [
+				{ "task": "End loop on months", "type": "all", "argument": "cubes" }
+			]
+		},
+		{
+			"name": "Evaluate long term anomaly",
+			"operator": "oph_reduce",
+			"arguments": [
+				"operation=avg",
+				"missingvalue=@{missingvalue}",
+				"description=Long term anomaly"
+			],
+			"dependencies": [
+				{ "task": "Merging", "type": "single" }
+			]
+		},
+		{
+			"name": "Metadata update",
+			"operator": "oph_metadata",
+			"arguments": [
+				"mode=insert",
+				"metadata_key=standard_name|long_name|units",
+				"metadata_value=dtr_anomaly|Anomaly of monthly mean of daily temperature range (DTR)|°C",
+				"variable=dtr_anomaly"
+			],
+			"dependencies": [
+				{ "task": "Evaluate long term anomaly", "type": "single" }
+			]
+		},
+		{
+			"name": "Export anomaly",
+			"operator": "oph_exportnc2",
+			"arguments": [
+				"output_path=/public/data/DTR/@{OPH_SESSION_CODE}/@{OPH_WORKFLOW_ID}"
+			],
+			"dependencies": [
+				{ "task": "Metadata update", "type": "single" }
+			]
+		},
+		{
+			"name": "Regridding",
+			"operator": "oph_script",
+			"arguments": [
+				"script=regrid",
+				"args=/public/data/DTR/@{OPH_SESSION_CODE}/@{OPH_WORKFLOW_ID} dtr_anomaly.nc ${3} ${6}"
+			],
+			"dependencies": [
+				{ "task": "Export anomaly" }
+			]
+		}
+	]
+}

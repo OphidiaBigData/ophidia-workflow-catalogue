@@ -1,0 +1,540 @@
+{
+    "name": "precip_trend_analysis",
+    "author": "CMCC Foundation",
+    "abstract": "Workflow for the analysis of precipitation trends related to different scenarios. ${1} is ncores; ${2} is the list of models (e.g. CMCC-CM|CMCC-CMS); ${3} is the scenario (e.g. rcp45 or rcp85); ${4} is the frequency (e.g. day or mon); ${5} is the percentile (e.g. 0.9); ${6} is the past time subset (e.g. 1976_2006); ${7} is the future time subset (e.g. 2071_2101); ${8} is the geographic subset (e.g. 30:45|0:40); ${9} is the grid of output map using the format r<lon>x<lat> (e.g. r360x180), i.e. a global regular lon/lat grid; ${10} import type (optional), set to '1' in case only subsetting data have to be imported (default); ${11} is I/O server type (optional).",
+    "exec_mode": "async",
+    "cwd": "/",
+    "ncores": "${1}",
+    "on_exit": "oph_delete",
+    "host_partition": "auto",
+    "tasks": [
+        {
+            "name": "Create Work Container",
+            "operator": "oph_createcontainer",
+            "arguments": [
+                "container=work",
+                "dim=lat|lon|time",
+                "dim_type=double|double|double",
+                "hierarchy=oph_base|oph_base|oph_time",
+                "compressed=no",
+                "ncores=1",
+                "base_time=1976-01-01",
+                "calendar=standard",
+                "units=d"
+            ],
+            "on_error": "skip"
+        },
+        {
+            "name": "Create Historical Container",
+            "operator": "oph_createcontainer",
+            "arguments": [
+                "container=historical",
+                "dim=lat|lon|time",
+                "dim_type=double|double|double",
+                "hierarchy=oph_base|oph_base|oph_time",
+                "compressed=no",
+                "ncores=1",
+                "base_time=1976-01-01",
+                "calendar=standard",
+                "units=d"
+            ],
+            "on_error": "skip"
+        },
+        {
+            "name": "Create Scenario Container",
+            "operator": "oph_createcontainer",
+            "arguments": [
+                "container=scenario",
+                "dim=lat|lon|time",
+                "dim_type=double|double|double",
+                "hierarchy=oph_base|oph_base|oph_time",
+                "compressed=no",
+                "ncores=1",
+                "base_time=2070-01-01",
+                "calendar=standard",
+                "units=d"
+            ],
+            "on_error": "skip"
+        },
+        {
+            "name": "loop_model",
+            "operator": "oph_for",
+            "arguments": [
+                "key=model",
+                "values=${2}",
+                "parallel=yes"
+            ],
+            "dependencies": [
+                { "task": "Create Work Container"},
+                { "task": "Create Historical Container"},
+                { "task": "Create Scenario Container"}
+            ]
+        },
+        {
+            "name": "Import Type Selection Historical",
+            "operator": "oph_if",
+            "arguments": [ "condition=${10}" ],
+            "dependencies": [
+                { "task": "loop_model" }
+            ]
+        },
+        {
+            "name": "Import Historical",
+            "operator": "oph_importnc",
+            "arguments": [
+                "container=historical",
+                "exp_dim=lat|lon",
+                "imp_dim=time",
+                "measure=pr",
+                "src_path=/INDIGO/precip_trend_data/@{model}/historical/${4}/pr_${4}_@{model}_historical_r1i1p1.nc",
+                "compressed=no",
+                "exp_concept_level=c|c",
+                "filesystem=local",
+                "imp_concept_level=${4}",
+                "ndb=1",
+                "ndbms=1",
+                "nhost=1",
+                "import_metadata=yes",
+                "check_compliance=no",
+                "units=d",
+                "subset_dims=time|lat|lon",
+                "subset_filter=${6}|${8}",
+                "subset_type=coord",
+                "offset=0|2|2",
+                "ioserver=${11}"
+            ],
+            "dependencies": [
+                { "task": "Import Type Selection Historical" }
+            ]
+        },
+        {
+            "name": "Import without subsetting Historical",
+            "operator": "oph_else",
+            "arguments": [ ],
+            "dependencies": [
+                { "task": "Import Type Selection Historical" }
+            ]
+        },
+        {
+            "name": "Import Historical Only",
+            "operator": "oph_importnc",
+            "arguments": [
+                "container=historical",
+                "exp_dim=lat|lon",
+                "imp_dim=time",
+                "measure=pr",
+                "src_path=/INDIGO/precip_trend_data/@{model}/historical/${4}/pr_${4}_@{model}_historical_r1i1p1.nc",
+                "compressed=no",
+                "exp_concept_level=c|c",
+                "filesystem=local",
+                "imp_concept_level=${4}",
+                "ndb=1",
+                "ndbms=1",
+                "nhost=1",
+                "import_metadata=yes",
+                "check_compliance=no",
+                "units=d",
+                "ioserver=${11}"
+            ],
+            "dependencies": [
+                { "task": "Import without subsetting Historical" }
+            ]
+        },
+        {
+            "name": "Subset Zone Historical",
+            "operator": "oph_subset",
+            "arguments": [
+                "subset_dims=time|lat|lon",
+                "subset_filter=${6}|${8}",
+                "offset=0|2|2"
+            ],
+            "dependencies": [
+                { "task": "Import Historical Only", "type": "single" }
+            ]
+        },
+        {
+            "name": "End Import Type Selection Historical",
+            "operator": "oph_endif",
+            "arguments": [ ],
+            "dependencies": [
+                { "task": "Import Historical", "type": "single" },
+                { "task": "Subset Zone Historical", "type": "single" }
+            ]
+        },
+        {
+            "name": "Subset JJA Historical",
+            "operator": "oph_subset",
+            "arguments": [
+                "subset_dims=time",
+                "subset_filter=JJA"
+            ],
+            "dependencies": [
+                { "task": "End Import Type Selection Historical", "type": "single" }
+            ]
+        },
+        {
+            "name": "90th percentile JJA Historical",
+            "operator": "oph_reduce2",
+            "arguments": [
+                "operation=quantile",
+                "dim=time",
+                "concept_level=y",
+                "order=${5}"
+            ],
+            "dependencies": [
+                { "task": "Subset JJA Historical", "type": "single" }
+            ]
+        },
+        {
+            "name": "Linear regression Historical",
+            "operator": "oph_apply",
+            "arguments": [
+                "query=oph_gsl_fit_linear_coeff(measure)",
+                "measure_type=auto"
+            ],
+            "dependencies": [
+                { "task": "90th percentile JJA Historical", "type": "single" }
+            ]
+        },
+        {
+            "name": "Import Type Selection Scenario",
+            "operator": "oph_if",
+            "arguments": [ "condition=${10}" ],
+            "dependencies": [
+                { "task": "loop_model" }
+            ]
+        },
+        {
+            "name": "Import Scenario",
+            "operator": "oph_importnc",
+            "arguments": [
+                "container=scenario",
+                "exp_dim=lat|lon",
+                "imp_dim=time",
+                "measure=pr",
+                "src_path=/INDIGO/precip_trend_data/@{model}/${3}/${4}/pr_${4}_@{model}_${3}_r1i1p1.nc",
+                "compressed=no",
+                "exp_concept_level=c|c",
+                "filesystem=local",
+                "imp_concept_level=${4}",
+                "ndb=1",
+                "ndbms=1",
+                "nhost=1",
+                "import_metadata=yes",
+                "check_compliance=no",
+                "units=d",
+                "subset_dims=time|lat|lon",
+                "subset_filter=${7}|${8}",
+                "subset_type=coord",
+                "offset=0|2|2",
+                "ioserver=${11}"
+            ],
+            "dependencies": [
+                { "task": "Import Type Selection Scenario" }
+            ]
+        },
+        {
+            
+            "name": "Import without subsetting Scenario",
+            "operator": "oph_else",
+            "arguments": [ ],
+            "dependencies": [
+                { "task": "Import Type Selection Scenario" }
+            ]
+        },
+        {
+            "name": "Import Scenario Only",
+            "operator": "oph_importnc",
+            "arguments": [
+                "container=scenario",
+                "exp_dim=lat|lon",
+                "imp_dim=time",
+                "measure=pr",
+                "src_path=/INDIGO/precip_trend_data/@{model}/${3}/${4}/pr_${4}_@{model}_${3}_r1i1p1.nc",
+                "compressed=no",
+                "exp_concept_level=c|c",
+                "filesystem=local",
+                "imp_concept_level=${4}",
+                "ndb=1",
+                "ndbms=1",
+                "nhost=1",
+                "import_metadata=yes",
+                "check_compliance=no",
+                "units=d",
+                "ioserver=${11}"
+            ],
+            "dependencies": [
+                { "task": "Import without subsetting Scenario" }
+            ]
+        },
+        {
+            "name": "Subset Zone Scenario",
+            "operator": "oph_subset",
+            "arguments": [
+                "subset_dims=time|lat|lon",
+                "subset_filter=${7}|${8}",
+                "offset=0|2|2"
+            ],
+            "dependencies": [
+                { "task": "Import Scenario Only", "type": "single" }
+            ]
+        },
+        {
+            "name": "End Import Type Selection Scenario",
+            "operator": "oph_endif",
+            "arguments": [ ],
+            "dependencies": [
+                { "task": "Import Scenario", "type": "single" },
+                { "task": "Subset Zone Scenario", "type": "single" }
+            ]
+        },
+        {
+            "name": "Subset JJA Scenario",
+            "operator": "oph_subset",
+            "arguments": [
+                "subset_dims=time",
+                "subset_filter=JJA"
+            ],
+            "dependencies": [
+                { "task": "End Import Type Selection Scenario", "type": "single" }
+            ]
+        },
+        {
+            "name": "90th percentile JJA Scenario",
+            "operator": "oph_reduce2",
+            "arguments": [
+                "operation=quantile",
+                "dim=time",
+                "concept_level=y",
+                "order=${5}"
+            ],
+            "dependencies": [
+                { "task": "Subset JJA Scenario", "type": "single" }
+            ]
+        },
+        {
+            "name": "Linear regression Scenario",
+            "operator": "oph_apply",
+            "arguments": [
+                "query=oph_gsl_fit_linear_coeff(measure)",
+                "measure_type=auto"
+            ],
+            "dependencies": [
+                { "task": "90th percentile JJA Scenario", "type": "single" }
+            ]
+        },
+        {
+            "name": "Trend differences",
+            "operator": "oph_intercube",
+            "arguments": [
+                "operation=sub",
+                "measure=precip_trend",
+                "container=work"
+            ],
+            "dependencies": [
+                { "task": "Linear regression Scenario", "argument": "cube", "type": "single" },
+                { "task": "Linear regression Historical", "argument": "cube2", "type": "single" }
+            ]
+        },
+        {
+            "name": "Unit change",
+            "operator": "oph_apply",
+            "arguments": [
+                "query=oph_mul_scalar(measure,86400)",
+                "measure_type=auto"
+            ],
+            "dependencies": [
+                { "task": "Trend differences", "type": "single" }
+            ]
+        },
+        {
+            "name": "Metadata update",
+            "operator": "oph_metadata",
+            "arguments": [
+                "mode=insert",
+                "metadata_key=standard_name|long_name|units",
+                "metadata_value=precipitation_trend|Precipitation Trend|mm d-1 y-1",
+                "variable=precip_trend"
+            ],
+            "dependencies": [
+                { "task": "Unit change", "type": "single" }
+            ]
+        },
+        {
+            "name": "Export",
+            "operator": "oph_exportnc2",
+            "arguments": [
+                "force=yes",
+                "output_name=precip_trend_analysis_@{model}",
+                "output_path=/INDIGO/precip_trend_input/@{OPH_SESSION_CODE}/@{OPH_WORKFLOW_ID}"
+            ],
+            "dependencies": [
+                { "task": "Metadata update", "type": "single" }
+            ],
+            "on_error": "repeat 5"
+        },
+        {
+            "name": "Create map",
+            "operator": "oph_script",
+            "arguments": [
+                "script=precip_trend_analysis",
+                "args=precip_trend_analysis_@{model}.nc ${8} ${9}"
+            ],
+            "dependencies": [
+                { "task": "Export" }
+            ]
+        },  
+        {
+            "name": "End loop_model",
+            "operator": "oph_endfor",
+            "arguments": [],
+            "dependencies": [
+                { "task": "Create map" }
+            ]
+        }, 
+        {
+            "name": "Ensemble Delete Work Container",
+            "operator": "oph_deletecontainer",
+            "arguments": [
+                "container=ensemble"
+            ],
+            "dependencies": [
+                { "task": "End loop_model" }
+            ],
+            "on_error": "skip"
+        },
+        {
+            "name": "Ensemble Create Work Container",
+            "operator": "oph_createcontainer",
+            "arguments": [
+                "container=ensemble",
+                "dim=lat|lon",
+                "dim_type=double|double",
+                "hierarchy=oph_base|oph_base",
+                "compressed=no",
+                "ncores=1"
+            ],
+            "dependencies": [
+                { "task": "Ensemble Delete Work Container" }
+            ],
+            "on_error": "skip"
+        },
+        {
+            "name": "loop",
+            "operator": "oph_for",
+            "arguments": [
+                "key=model",
+                "values=${2}",
+                "parallel=yes"
+            ],
+            "dependencies": [
+                { "task": "Ensemble Create Work Container", "type": "single" }
+            ]
+        },
+        {
+            "name": "Ensemble import",
+            "operator": "oph_importnc",
+            "arguments": [
+                "cwd=/",
+                "measure=precip_trend",
+                "src_path=/INDIGO/precip_trend_input/@{OPH_SESSION_CODE}/@{OPH_WORKFLOW_ID}/precip_trend_analysis_@{model}.nc",
+                "import_metadata=yes",
+                "nfrag=1",
+                "container=ensemble",
+                "grid=map",
+                "ioserver=${11}"
+            ],
+            "dependencies": [
+                { "task": "loop", "type": "single" }
+            ]
+        },
+        {
+            "name": "End loop",
+            "operator": "oph_endfor",
+            "arguments": [],
+            "dependencies": [
+                { "task": "Ensemble import", "type": "all" }
+            ]
+        },
+        {
+            "name": "Ensemble merging",
+            "operator": "oph_mergecubes2",
+            "arguments": ["dim=new_dim"],
+            "dependencies": [
+                { "task": "End loop", "type": "all", "argument": "cubes" }
+            ]
+        },
+        {
+            "name": "loop_reduce",
+            "operator": "oph_for",
+            "arguments": [ "key=index", "values=avg|min|max|var|std", "parallel=yes" ],
+            "dependencies": [
+                { "task":"Ensemble merging", "type": "single" }
+            ]
+        },
+        {
+            "name": "Ensemble reducing",
+            "operator": "oph_reduce2",
+            "arguments": [
+                "operation=@{index}",
+                "dim=new_dim"
+            ],
+            "dependencies": [
+                { "task": "loop_reduce", "type": "single" }
+            ]
+        },
+        {
+            "name": "Ensemble export",
+            "operator": "oph_exportnc2",
+            "arguments": [
+                "force=yes",
+                "output_name=@{index}",
+                "output_path=/INDIGO/precip_trend_output/@{OPH_SESSION_CODE}/@{OPH_WORKFLOW_ID}"
+            ],
+            "dependencies": [
+                { "task": "Ensemble reducing", "type": "single" }
+            ],
+            "on_error": "repeat 5"
+        },
+        {
+            "name": "Ensemble Post",
+            "operator": "oph_script",
+            "arguments": [
+                "script=precip_trend_analysis_ensemble",
+                "args=@{index}"
+            ],
+            "dependencies": [
+                { "task": "Ensemble export" } 
+            ]
+        },
+        {
+            "name": "End loop_reduce",
+            "operator": "oph_endfor",
+            "arguments": [ ],
+            "dependencies": [
+                { "task":"Ensemble Post" } ]
+        },
+        {
+            "name": "Ensemble Delete all cubes",
+            "operator": "oph_delete",
+            "arguments": [
+                "cube=[container=ensemble]"
+            ],
+            "dependencies": [
+                { "task": "End loop_reduce" }
+            ],
+            "on_error": "skip"
+        },
+        {
+            "name": "Ensemble Delete container",
+            "operator": "oph_deletecontainer",
+            "arguments": [
+                "container=ensemble"
+            ],
+            "dependencies": [
+                { "task": "Ensemble Delete all cubes" }
+            ],
+            "on_error": "skip"
+        }   
+    ]
+}

@@ -1,0 +1,328 @@
+{
+    "name": "Cold Spells",
+    "author": "CMCC",
+    "abstract": "Perform the computation of Cold Spells indexes. $1 is the folder containing bash scripts; $2 is the folder containing data to be processed and output",
+    "exec_mode": "sync",
+    "tasks": [
+        {
+            "type": "ophidia",
+            "name": "Download datasets",
+            "operator": "oph_script",
+            "arguments": [
+                "script=$1/coldspells.sh"
+            ],
+            "dependencies": [],
+            "extra": {}
+        },
+        {
+            "type": "cdo",
+            "name": "Evaluate climatological mean",
+            "operator": "-ydaymean -runavg,5 -delete,dom=29feb -mergetime",
+            "arguments": [
+                "input=$2/historical/tasmin*.nc",
+                "output=$2/historical/climatological_mean.nc",
+                "description=Evaluate climatological mean"
+            ],
+            "dependencies": [
+                {
+                    "task": "Download datasets"
+                }
+            ],
+            "extra": {}
+        },
+        {
+            "type": "cdo",
+            "name": "Split datasets",
+            "operator": "-splityear -delete,dom=29feb",
+            "arguments": [
+                "input=$2/model/tasmin*.nc",
+                "output=$2/model/year",
+                "description=Split datasets"
+            ],
+            "dependencies": [
+                {
+                    "task": "Download datasets"
+                }
+            ],
+            "extra": {}
+        },
+        {
+            "type": "ophidia",
+            "name": "Create container",
+            "operator": "oph_createcontainer",
+            "arguments": [
+                "container=coldspells",
+                "dim=lat|lon|time",
+                "dim_type=double|double|double",
+                "hierarchy=oph_base|oph_base|oph_time"
+            ],
+            "dependencies": [],
+            "extra": {},
+            "on_error": "skip"
+        },
+        {
+            "type": "ophidia",
+            "name": "Import climate averages",
+            "operator": "oph_importnc2",
+            "arguments": [
+                "measure=tasmin",
+                "container=coldspells",
+                "import_metadata=yes",
+                "imp_dim=time",
+                "imp_concept_level=d",
+                "hierarchy=oph_base|oph_base|oph_time",
+                "description=Min temperature climatological mean",
+                "nhost=1",
+                "nthreads=8"
+            ],
+            "dependencies": [
+                {
+                    "argument": "input",
+                    "task": "Evaluate climatological mean"
+                },
+                {
+                    "task": "Create container"
+                }
+            ],
+            "extra": {}
+        },
+        {
+            "type": "control",
+            "name": "Begin parallel for",
+            "operator": "for",
+            "arguments": [
+                "input=[$2/model/year*.nc]",
+                "key=source",
+                "parallel=yes"
+            ],
+            "dependencies": [
+                {
+                    "task": "Split datasets"
+                }
+            ],
+            "extra": {}
+        },
+        {
+            "type": "ophidia",
+            "name": "Import",
+            "operator": "oph_importnc2",
+            "arguments": [
+                "input=@source",
+                "measure=tasmin",
+                "container=coldspells",
+                "import_metadata=yes",
+                "imp_dim=time",
+                "imp_concept_level=d",
+                "hierarchy=oph_base|oph_base|oph_time",
+                "description=Min temperature in current year",
+                "nhost=1",
+                "nthreads=8"
+            ],
+            "dependencies": [
+                {
+                    "task": "Create container"
+                },
+                {
+                    "task": "Begin parallel for"
+                }
+            ],
+            "extra": {}
+        },
+        {
+            "type": "ophidia",
+            "name": "Intercube",
+            "operator": "oph_intercube",
+            "arguments": [
+                "description=Result from intercube"
+            ],
+            "dependencies": [
+                {
+                    "argument": "cube",
+                    "task": "Import"
+                },
+                {
+                    "argument": "cube2",
+                    "task": "Import climate averages"
+                }
+            ],
+            "extra": {}
+        },
+        {
+            "type": "ophidia",
+            "name": "Apply",
+            "operator": "oph_apply",
+            "arguments": [
+                "query=oph_predicate('OPH_INT','OPH_INT',oph_sequence('OPH_INT','OPH_INT', oph_predicate('OPH_FLOAT','OPH_INT',oph_predicate('OPH_FLOAT','OPH_FLOAT',measure,'x-1000','>0','0','x'),'x+5','<0','1','0'), 'length', 'yes'),'x-5','>0','x','0')",
+                "description=Cold Spell Duration cube"
+            ],
+            "dependencies": [
+                {
+                    "argument": "cube",
+                    "task": "Intercube"
+                }
+            ],
+            "extra": {}
+        },
+        {
+            "type": "control",
+            "name": "End parallel for",
+            "operator": "endfor",
+            "arguments": [],
+            "dependencies": [
+                {
+                    "argument": "cube",
+                    "task": "Apply"
+                }
+            ],
+            "extra": {}
+        },
+        {
+            "type": "ophidia",
+            "name": "Merge",
+            "operator": "oph_mergecubes",
+            "arguments": [
+                "mode=a",
+                "hold_values=yes",
+                "order=source"
+            ],
+            "dependencies": [
+                {
+                    "argument": "cubes",
+                    "task": "End parallel for"
+                }
+            ],
+            "extra": {}
+        },
+        {
+            "type": "ophidia",
+            "name": "Reduce for CSD",
+            "operator": "oph_reduce2",
+            "arguments": [
+                "operation=max",
+                "dim=time",
+                "description=Cold Spell Duration Index cube"
+            ],
+            "dependencies": [
+                {
+                    "argument": "cube",
+                    "task": "Merge"
+                }
+            ],
+            "extra": {}
+        },
+        {
+            "type": "ophidia",
+            "name": "Export CSD",
+            "operator": "oph_exportnc2",
+            "arguments": [
+                "output=$2/CSD.nc"
+            ],
+            "dependencies": [
+                {
+                    "argument": "cube",
+                    "task": "Reduce for CSD"
+                }
+            ],
+            "extra": {}
+        },
+        {
+            "type": "ophidia",
+            "name": "Apply for CSN",
+            "operator": "oph_apply",
+            "arguments": [
+                "query=oph_predicate('OPH_INT','OPH_INT',measure,'x','>0','1','0')",
+                "description=Apply for CSN cube"
+            ],
+            "dependencies": [
+                {
+                    "argument": "cube",
+                    "task": "Merge"
+                }
+            ],
+            "extra": {}
+        },
+        {
+            "type": "ophidia",
+            "name": "Reduce for CSN",
+            "operator": "oph_reduce2",
+            "arguments": [
+                "operation=sum",
+                "dim=time",
+                "description=Cold Spell Number cube"
+            ],
+            "dependencies": [
+                {
+                    "argument": "cube",
+                    "task": "Apply for CSN"
+                }
+            ],
+            "extra": {}
+        },
+        {
+            "type": "ophidia",
+            "name": "Export CSN",
+            "operator": "oph_exportnc2",
+            "arguments": [
+                "output=$2/CSN.nc"
+            ],
+            "dependencies": [
+                {
+                    "argument": "cube",
+                    "task": "Reduce for CSN"
+                }
+            ],
+            "extra": {}
+        },
+        {
+            "type": "ophidia",
+            "name": "Reduce for CSF",
+            "operator": "oph_reduce2",
+            "arguments": [
+                "operation=sum",
+                "dim=time",
+                "description=Reduce for CSF cube"
+            ],
+            "dependencies": [
+                {
+                    "argument": "cube",
+                    "task": "Merge"
+                }
+            ],
+            "extra": {}
+        },
+        {
+            "type": "ophidia",
+            "name": "Apply for CSF",
+            "operator": "oph_apply",
+            "arguments": [
+                "query=oph_mul_scalar('OPH_INT','OPH_FLOAT',measure,0.0027397260273972603)",
+                "description=Cold Spell Frequency cube"
+            ],
+            "dependencies": [
+                {
+                    "argument": "cube",
+                    "task": "Reduce for CSF"
+                }
+            ],
+            "extra": {}
+        },
+        {
+            "type": "ophidia",
+            "name": "Export CSF",
+            "operator": "oph_exportnc2",
+            "arguments": [
+                "output=$2/CSF.nc"
+            ],
+            "dependencies": [
+                {
+                    "argument": "cube",
+                    "task": "Apply for CSF"
+                }
+            ],
+            "extra": {}
+        }
+    ],
+    "host_partition": "partition",
+    "on_exit": "oph_delete",
+    "ncores": "1"
+}
