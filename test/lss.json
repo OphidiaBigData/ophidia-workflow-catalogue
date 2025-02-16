@@ -31,7 +31,7 @@
 		},
 		{
 			"name": "Pre-processing3",
-			"operator": "oph_apply		",
+			"operator": "oph_apply",
 			"arguments": [
 				"query=oph_predicate(measure,'x','<0','NAN','x')",
 				"measure_type=auto",
