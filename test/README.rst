@@ -5,15 +5,18 @@ Ophidia Workflow Catalogue
 Test workflows
 ==============
 
-This folder contains a number of workflows that can be used to test Ophidia service. Refer to PyOphidia_documentation_ for validation procedure.
+This folder contains a number of workflows that can be used to test Ophidia service. Refer to `PyOphidia documentation`_ for validation procedure.
 
 Cold Spells
 -----------
 File: coldspells.py
+
 Description: this workflow performs the computation of Cold Spells indexes.
+
 Arguments:
 1. the folder containing bash scripts (optional, by default the base folder will be the root folder)
 2. the folder containing data to be processed and output (optional, by default the base folder will be the root folder)
+
 Test example:
 
 .. code-block:: python
@@ -24,7 +27,9 @@ Test example:
 Anomaly of Diurnal Temperature Range
 ------------------------------------
 File: dtr.py
+
 Description: this workflow computes the anomaly of DTR (Diurnal Temperature Range) index with respect to past values; it works on two input files (tasmin/tasmax variable).
+
 Arguments:
 1. ncores (mandatory)
 2. the model name, e.g. 'CMCC-CM' (mandatory)
@@ -33,6 +38,7 @@ Arguments:
 5. the second time filter (scenario)
 6. the grid of output map using the format r<lon>x<lat> (e.g. r360x180), i.e. a global regular lon/lat grid (optional, by default the lon/lat grid of input file is adopted)
 7. I/O server type (optional).
+
 Test example:
 
 .. code-block:: python
@@ -49,12 +55,15 @@ Test example:
 Lenght of snow season
 ---------------------
 File: lss.py
+
 Description: this workflow evaluates the lenght of snow season.
+
 Arguments:
 1. pid of input data cube, e.g. http://127.0.0.1/ophidia/1/1 (mandatory)
 2. output path (mandatory)
 3. output file name (optional)
 4. path to bash script (optional, by default the base folder will be the root folder)
+
 Test example:
 
 .. code-block:: python
@@ -68,7 +77,9 @@ Test example:
 Precipitation trend analysis
 ----------------------------
 File: pta.py
+
 Description: this workflow analyse precipitation trends related to different scenarios.
+
 Arguments:
 1. ncores (mandatory)
 2. list of models (e.g. 'CMCC-CM|CMCC-CMS')
@@ -81,6 +92,7 @@ Arguments:
 9. the grid of output map using the format r<lon>x<lat> (e.g. r360x180), i.e. a global regular lon/lat grid
 10. import type (optional), set to '1' in case only subsetting data have to be imported (default)
 11. I/O server type (optional)
+
 Test example:
 
 .. code-block:: python
@@ -102,11 +114,14 @@ Test example:
 Sea surface temperature
 -----------------------
 File: sst.py
+
 Description: this workflow evaluates monthly averages of sea surface temperature (SST).
+
 Arguments:
 1. ncores (mandatory)
 2. output path (mandatory)
 3. path to bash script (optional, by default the base folder will be the root folder)
+
 Test example:
 
 .. code-block:: python
@@ -120,12 +135,15 @@ Test example:
 Snow water equivalent
 ---------------------
 File: swe.py
+
 Description: this workflow evaluates monthly averages of snow water equivalent (SWE).
+
 Arguments:
 1. pid of input data cube, e.g. http://127.0.0.1/ophidia/1/1 (mandatory)
 2. output path (mandatory)
 3. output file name (optional)
 4. path to bash script (optional, by default the base folder will be the root folder)
+
 Test example:
 
 .. code-block:: python
@@ -140,7 +158,7 @@ Uncorrect workflows
 -------------------
 The folder includes some workflows with errors named uncorrect1.py and uncorrect2.py useful for tests.
 
-Further information about workflow submission can be found at Ophidia_documentation_.
+Further information about workflow submission can be found at `Ophidia documentation`_.
 
 .. _PyOphidia_documentation: https://pyophidia.readthedocs.io/en/stable/
 .. _Ophidia_documentation: https://ophidia.cmcc.it/documentation/users/workflow/workflow_basic.html#workflow-submission
