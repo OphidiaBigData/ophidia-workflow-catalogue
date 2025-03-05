@@ -14,8 +14,9 @@ File: coldspells.py
 Description: this workflow performs the computation of Cold Spells indexes.
 
 Arguments:
-1. the folder containing bash scripts (optional, by default the base folder will be the root folder)
-2. the folder containing data to be processed and output (optional, by default the base folder will be the root folder)
+
+#. the folder containing bash scripts (optional, by default the base folder will be the root folder)
+#. the folder containing data to be processed and output (optional, by default the base folder will be the root folder)
 
 Test example:
 
@@ -31,13 +32,14 @@ File: dtr.py
 Description: this workflow computes the anomaly of DTR (Diurnal Temperature Range) index with respect to past values; it works on two input files (tasmin/tasmax variable).
 
 Arguments:
-1. ncores (mandatory)
-2. the model name, e.g. 'CMCC-CM' (mandatory)
-3. spatial filter (lat|lon ranges)
-4. the first time filter (historical)
-5. the second time filter (scenario)
-6. the grid of output map using the format r<lon>x<lat> (e.g. r360x180), i.e. a global regular lon/lat grid (optional, by default the lon/lat grid of input file is adopted)
-7. I/O server type (optional).
+
+#. ncores (mandatory)
+#. the model name, e.g. 'CMCC-CM' (mandatory)
+#. spatial filter (lat|lon ranges)
+#. the first time filter (historical)
+#. the second time filter (scenario)
+#. the grid of output map using the format r<lon>x<lat> (e.g. r360x180), i.e. a global regular lon/lat grid (optional, by default the lon/lat grid of input file is adopted)
+#. I/O server type (optional).
 
 Test example:
 
@@ -59,10 +61,11 @@ File: lss.py
 Description: this workflow evaluates the lenght of snow season.
 
 Arguments:
-1. pid of input data cube, e.g. http://127.0.0.1/ophidia/1/1 (mandatory)
-2. output path (mandatory)
-3. output file name (optional)
-4. path to bash script (optional, by default the base folder will be the root folder)
+
+#. pid of input data cube, e.g. http://127.0.0.1/ophidia/1/1 (mandatory)
+#. output path (mandatory)
+#. output file name (optional)
+#. path to bash script (optional, by default the base folder will be the root folder)
 
 Test example:
 
@@ -81,17 +84,18 @@ File: pta.py
 Description: this workflow analyse precipitation trends related to different scenarios.
 
 Arguments:
-1. ncores (mandatory)
-2. list of models (e.g. 'CMCC-CM|CMCC-CMS')
-3. scenario (e.g. rcp45 or rcp85)
-4. frequency (e.g. day or mon)
-5. percentile (e.g. 0.9)
-6. past time subset (e.g. 1976_2006)
-7. future time subset (e.g. 2071_2101)
-8. geographic subset (e.g. 30:45|0:40)
-9. the grid of output map using the format r<lon>x<lat> (e.g. r360x180), i.e. a global regular lon/lat grid
-10. import type (optional), set to '1' in case only subsetting data have to be imported (default)
-11. I/O server type (optional)
+
+#. ncores (mandatory)
+#. list of models (e.g. 'CMCC-CM|CMCC-CMS')
+#. scenario (e.g. rcp45 or rcp85)
+#. frequency (e.g. day or mon)
+#. percentile (e.g. 0.9)
+#. past time subset (e.g. 1976_2006)
+#. future time subset (e.g. 2071_2101)
+#. geographic subset (e.g. 30:45|0:40)
+#. the grid of output map using the format r<lon>x<lat> (e.g. r360x180), i.e. a global regular lon/lat grid
+#. import type (optional), set to '1' in case only subsetting data have to be imported (default)
+#. I/O server type (optional)
 
 Test example:
 
@@ -118,9 +122,10 @@ File: sst.py
 Description: this workflow evaluates monthly averages of sea surface temperature (SST).
 
 Arguments:
-1. ncores (mandatory)
-2. output path (mandatory)
-3. path to bash script (optional, by default the base folder will be the root folder)
+
+#. ncores (mandatory)
+#. output path (mandatory)
+#. path to bash script (optional, by default the base folder will be the root folder)
 
 Test example:
 
@@ -139,10 +144,11 @@ File: swe.py
 Description: this workflow evaluates monthly averages of snow water equivalent (SWE).
 
 Arguments:
-1. pid of input data cube, e.g. http://127.0.0.1/ophidia/1/1 (mandatory)
-2. output path (mandatory)
-3. output file name (optional)
-4. path to bash script (optional, by default the base folder will be the root folder)
+
+#. pid of input data cube, e.g. http://127.0.0.1/ophidia/1/1 (mandatory)
+#. output path (mandatory)
+#. output file name (optional)
+#. path to bash script (optional, by default the base folder will be the root folder)
 
 Test example:
 
