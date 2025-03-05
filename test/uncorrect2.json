@@ -1,0 +1,139 @@
+{
+	"name": "Example of uncorrect workflow",
+	"author": "CMCC",
+	"abstract": "Uncorrect workflow",
+	"exec_mode": "sync",
+	"on_exit": "oph_delete",
+	"tasks":
+	[
+		{
+			"name": "CreateContainer",
+			"operator": "oph_createcontainer",
+			"arguments":
+			[
+				"container=test",
+				"dim=lat|lon|time",
+				"hierarchy=oph_base|oph_base|oph_time",
+				"vocabulary=CF",
+				"ncores=1"
+			],
+			"on_error": "skip"
+		},
+		{
+			"name": "Randcube",
+			"operator": "oph_randcube",
+			"arguments":
+			[
+				"container=test",
+				"dim=lat|lon|time",
+				"dim_size=10|10|360",
+				"exp_ndim=2",
+				"measure=random",
+				"measure_type=float",
+				"nfrag=10",
+				"ntuple=10",
+				"concept_level=c|c|d"
+			],
+			"dependencies":
+			[
+				{ "task": "CreateContainer" }
+			]
+		},
+		{
+			"name": "IF",
+			"operator": "oph_if",
+			"arguments": [ "condition=0" ],
+			"dependencies":
+			[
+				{ "task":"Randcube", "type":"single" }
+			]
+		},
+		{
+			"name": "Cubeschema",
+			"operator": "oph_cubeschema",
+			"arguments": [ ],
+			"dependencies":
+			[
+				{ "task":"IF", "type":"single" }
+			]
+		},
+		{
+			"name": "ELSE",
+			"operator": "oph_else",
+			"arguments": [ ],
+			"dependencies":
+			[
+				{ "task":"IF", "type":"single" }
+			]
+		},
+		{
+			"name": "Cubeschema2",
+			"operator": "oph_cubeschema",
+			"arguments": [ ],
+			"dependencies":
+			[
+				{ "task":"Cubeschema", "type":"single" }
+			]
+		},
+		{
+			"name": "GetType",
+			"operator": "oph_set",
+			"arguments":
+			[
+				"key=type",
+				"value=cubeschema_cubeinfo.Datacube Information.MEASURE TYPE"
+			],
+			"dependencies":
+			[
+				{ "task":"Cubeschema2", "type":"single" }
+			]
+		},
+		{
+			"name": "FOR",
+			"operator": "oph_for",
+			"arguments":
+			[
+				"key=index",
+				"values=oph_div_array|oph_sub_array",
+				"parallel=yes"
+			],
+			"dependencies":
+			[
+				{ "task":"GetType", "type":"single" }
+			]
+		},
+		{
+			"name": "APPLY",
+			"operator": "oph_apply",
+			"arguments":
+			[
+				"query=@{index}('oph_@{type}|oph_@{type}','oph_@{type}',measure,measure)",
+				"check_type=no"
+			],
+			"dependencies":
+			[
+				{ "task":"FOR", "type":"single" },
+				{ "task":"ELSE", "type":"single" }
+			]
+		},
+		{
+			"name": "ENDFOR",
+			"operator": "oph_endfor",
+			"arguments": [ ],
+			"dependencies":
+			[
+				{ "task":"APPLY", "type":"single" }
+			]
+		},
+		{
+			"name": "ENDIF",
+			"operator": "oph_endif",
+			"arguments": [ ],
+			"dependencies":
+			[
+				{ "task":"Cubeschema", "type":"single" },
+				{ "task":"ENDFOR", "type":"single" }
+			]
+		}
+	]
+}
