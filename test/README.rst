@@ -5,7 +5,7 @@ Ophidia Workflow Catalogue
 Test workflows
 ==============
 
-This folder contains a number of workflows that can be used to test Ophidia service. Refer to [PyOphidia documentation](https://pyophidia.readthedocs.io/en/stable/) to use the validation procedure.
+This folder contains a number of workflows that can be used to test Ophidia service. Refer to PyOphidia_documentation_ for validation procedure.
 
 Cold Spells
 -----------
@@ -15,6 +15,7 @@ Arguments:
 1. the folder containing bash scripts (optional, by default the base folder will be the root folder)
 2. the folder containing data to be processed and output (optional, by default the base folder will be the root folder)
 Test example:
+
 .. code-block:: python
 
 	from pyophidia import Experiment
@@ -33,6 +34,7 @@ Arguments:
 6. the grid of output map using the format r<lon>x<lat> (e.g. r360x180), i.e. a global regular lon/lat grid (optional, by default the lon/lat grid of input file is adopted)
 7. I/O server type (optional).
 Test example:
+
 .. code-block:: python
 
 	from pyophidia import Experiment
@@ -54,6 +56,7 @@ Arguments:
 3. output file name (optional)
 4. path to bash script (optional, by default the base folder will be the root folder)
 Test example:
+
 .. code-block:: python
 
 	from pyophidia import Experiment
@@ -79,6 +82,7 @@ Arguments:
 10. import type (optional), set to '1' in case only subsetting data have to be imported (default)
 11. I/O server type (optional)
 Test example:
+
 .. code-block:: python
 
 	from pyophidia import Experiment
@@ -104,6 +108,7 @@ Arguments:
 2. output path (mandatory)
 3. path to bash script (optional, by default the base folder will be the root folder)
 Test example:
+
 .. code-block:: python
 
 	from pyophidia import Experiment
@@ -122,6 +127,7 @@ Arguments:
 3. output file name (optional)
 4. path to bash script (optional, by default the base folder will be the root folder)
 Test example:
+
 .. code-block:: python
 
 	from pyophidia import Experiment
@@ -134,5 +140,8 @@ Uncorrect workflows
 -------------------
 The folder includes some workflows with errors named uncorrect1.py and uncorrect2.py useful for tests.
 
-Further information about workflow submission can be found at [Ophidia documentation](https://ophidia.cmcc.it/documentation/users/workflow/workflow_basic.html#workflow-submission).
+Further information about workflow submission can be found at Ophidia_documentation_.
+
+.. _PyOphidia_documentation: https://pyophidia.readthedocs.io/en/stable/
+.. _Ophidia_documentation: https://ophidia.cmcc.it/documentation/users/workflow/workflow_basic.html#workflow-submission
 
