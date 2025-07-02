@@ -1,0 +1,138 @@
+{
+	"name": "Vorticity",
+	"author": "CMCC",
+	"abstract": "This workflow evaluate the wind vorticity dv/dlon - du/dlat given the wind components u and v",
+	"exec_mode": "sync",
+	"ncores": "1",
+	"nthreads": "${3}",
+	"on_exit": "oph_delete",
+	"tasks":
+	[
+		{
+			"name": "Create a work container",
+			"operator": "oph_createcontainer",
+			"arguments": [ "container=wind", "dim=time|plev|lat|lon"  ],
+			"on_error": "skip"
+		},
+		{
+			"name": "Get latitude",
+			"operator": "oph_importnc2",
+			"arguments": [ "imp_dim=lat", "measure=lat", "input=${8}", "container=wind", "nfrag=1", "subset_dims=lat", "subset_filter=${4}", "subset_type=coord" ],
+			"dependencies": [ { "task": "Create a work container" } ]
+		},
+		{
+			"name": "Evaluate latitude factor",
+			"operator": "oph_apply",
+			"arguments": [ "query=oph_matheval('oph_double','oph_float',measure,'cos(pi*x/180)')" ],
+			"dependencies": [ { "task": "Get latitude", "type": "single" } ]
+		},
+		{
+			"name": "Iterate on time",
+			"operator": "oph_for",
+			"arguments": [ "parallel=yes", "key=source", "input=[${1}/psl_*.nc]" ]
+		},
+		{
+			"name": "Import PSL",
+			"operator": "oph_importnc2",
+			"arguments": [ "imp_dim=lat", "measure=psl", "input=@{source}", "container=wind", "nfrag=${3}", "subset_dims=lat|lon", "subset_filter=${4}|${5}", "subset_type=coord" ],
+			"dependencies": [ { "task": "Create a work container" }, { "task": "Iterate on time" } ]
+		},
+		{
+			"name": "Export PSL",
+			"operator": "oph_exportnc2",
+			"arguments": [ "output=${2}/@{source_file}" ],
+			"dependencies": [ { "task": "Import PSL", "type": "single" } ]
+		},
+		{
+			"name": "Regrid PSL",
+			"operator": "oph_script",
+			"arguments": [ "script=${6}", "args=${2}/@{source_file} ${4} ${5} ${7}" ],
+			"dependencies": [ { "task": "Export PSL" } ]
+		},  
+		{
+			"name": "Import U",
+			"operator": "oph_importnc2",
+			"arguments": [ "imp_dim=lat", "measure=ua", "input=@{source_path}/ua_@{source_file+4}", "container=wind", "nfrag=${3}", "subset_dims=plev|lat|lon", "subset_filter=85000|${4}|${5}", "subset_type=coord" ],
+			"dependencies": [ { "task": "Create a work container" }, { "task": "Iterate on time" } ]
+		},
+		{
+			"name": "Evaluate du/dlat",
+			"operator": "oph_apply",
+			"arguments": [ "query=oph_matheval(oph_gsl_spline(measure,dimension,dimension,1),'180*x/(6372507*pi)')", "measure_type=auto" ],
+			"dependencies": [ { "task": "Import U", "type": "single" } ]
+		},
+		{
+			"name": "Rollup U",
+			"operator": "oph_rollup",
+			"arguments": [ ],
+			"dependencies": [ { "task": "Evaluate du/dlat", "type": "single" } ]
+		},
+		{
+			"name": "Permute U",
+			"operator": "oph_permute",
+			"arguments": [ "dim_pos=2,1" ],
+			"dependencies": [ { "task": "Rollup U", "type": "single" } ]
+		},
+		{
+			"name": "Import V",
+			"operator": "oph_importnc2",
+			"arguments": [ "imp_dim=lon", "measure=va", "input=@{source_path}/va_@{source_file+4}", "container=wind", "nfrag=${3}", "subset_dims=plev|lat|lon", "subset_filter=85000|${4}|${5}", "subset_type=coord" ],
+			"dependencies": [ { "task": "Create a work container" }, { "task": "Iterate on time" } ]
+		},
+		{
+			"name": "Evaluate dv/dlon",
+			"operator": "oph_apply",
+			"arguments": [ "query=oph_matheval(oph_gsl_spline(measure,dimension,dimension,1),'180*x/(6372507*pi)')", "measure_type=auto" ],
+			"dependencies": [ { "task": "Import V", "type": "single" } ]
+		},
+		{
+			"name": "Rollup V",
+			"operator": "oph_rollup",
+			"arguments": [ ],
+			"dependencies": [ { "task": "Evaluate dv/dlon", "type": "single" } ]
+		},
+		{
+			"name": "Put latitude factor",
+			"operator": "oph_intercube",
+			"arguments": [ "operation=div", "cube2_is_array=yes", "extension_type=interlace" ],
+			"dependencies": [ { "task": "Rollup V", "type": "single" }, { "task": "Evaluate latitude factor", "type": "single", "argument": "cube2" } ]
+		},
+		{
+			"name": "Evaluate vorticity",
+			"operator": "oph_intercube",
+			"arguments": [ "measure=rv850" ],
+			"dependencies": [ { "task": "Put latitude factor", "type": "single" }, { "task": "Permute U", "type": "single", "argument": "cube2" } ]
+		},
+		{
+			"name": "Delete metadata",
+			"operator": "oph_metadata",
+			"arguments": [ "mode=delete", "variable=rv850", "metadata_key=comment" ],
+			"dependencies": [ { "task": "Evaluate vorticity", "type": "single" } ]
+		},
+		{
+			"name": "Update metadata",
+			"operator": "oph_metadata",
+			"arguments": [ "mode=update", "variable=rv850", "metadata_key=standard_name|long_name|units", "metadata_value=atmosphere_relative_vorticity|Vorticity (relative)|s**-1", "force=yes" ],
+			"dependencies": [ { "task": "Delete metadata", "type": "single" } ]
+		},
+		{
+			"name": "Export VO",
+			"operator": "oph_exportnc2",
+			"arguments": [ "output=${2}/vo_@{source_file+4}" ],
+			"dependencies": [ { "task": "Update metadata", "type": "single" } ]
+		},
+		{
+			"name": "Regrid VO",
+			"operator": "oph_script",
+			"arguments": [ "script=${6}", "args=${2}/vo_@{source_file+4} ${4} ${5} ${7}" ],
+			"dependencies": [ { "task": "Export VO" } ]
+		},  
+		{
+			"name": "End iteration",
+			"operator": "oph_endfor",
+			"arguments": [ ],
+			"dependencies": [ { "task": "Regrid PSL" }, { "task": "Regrid VO" } ]
+		}
+	]
+}
+

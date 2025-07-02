@@ -1,0 +1,284 @@
+{
+  "name": "Fires",
+  "author": "CMCC",
+  "abstract": "This workflow evaluate the fire metrics given the datasets of several scenarios and models using PyOphidia",
+  "exec_mode": "sync",
+  "tasks": [
+    {
+      "type": "ophidia",
+      "name": "Create a work container",
+      "operator": "oph_createcontainer",
+      "arguments": [
+        "container=fires",
+        "dim=time|lat|lon",
+        "hierarchy=oph_time|oph_base|oph_base"
+      ],
+      "dependencies": [],
+      "on_error": "skip"
+    },
+    {
+      "type": "ophidia",
+      "name": "Iterate on scenarios",
+      "operator": "oph_for",
+      "arguments": [
+        "parallel=yes",
+        "key=scenario",
+        "values=ssp126"
+      ],
+      "dependencies": []
+    },
+    {
+      "type": "ophidia",
+      "name": "Iterate on models",
+      "operator": "oph_for",
+      "arguments": [
+        "parallel=yes",
+        "key=model",
+        "values=CMCC-ESM2"
+      ],
+      "dependencies": [
+        {
+          "task": "Iterate on scenarios"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "Iterate on variables",
+      "operator": "oph_for",
+      "arguments": [
+        "parallel=yes",
+        "key=variable",
+        "values=pr"
+      ],
+      "dependencies": [
+        {
+          "task": "Iterate on models"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "Import variable",
+      "operator": "oph_importncs",
+      "arguments": [
+        "imp_dim=time",
+        "measure=@variable",
+        "src_path=/data/fires/@{model}/@{scenario}/@{variable}/@{variable}_day_@{model}_@{scenario}_r1i1p1f1_gn_*.nc",
+        "container=fires",
+        "nfrag=1",
+        "subset_dims=time",
+        "subset_filter=2090-01-01_2090-01-15",
+        "subset_type=coord"
+      ],
+      "dependencies": [
+        {
+          "task": "Create a work container"
+        },
+        {
+          "task": "Iterate on variables"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "Reduction on octets",
+      "operator": "oph_reduce2",
+      "arguments": [
+        "operation=median",
+        "concept_level=o"
+      ],
+      "dependencies": [
+        {
+          "argument": "cube",
+          "task": "Import variable"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "Export variable",
+      "operator": "oph_exportnc2",
+      "arguments": [
+        "output=/data/fires/output/@{variable}_day_@{model}_@{scenario}_r1i1p1f1_gn_2090-01-01_2090-01-15.nc"
+      ],
+      "dependencies": [
+        {
+          "argument": "cube",
+          "task": "Reduction on octets"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "Regrid variable",
+      "operator": "oph_script",
+      "arguments": [
+        "script=/path/to/regrid.sh",
+        "args=/data/fires/output/@{variable}_day_@{model}_@{scenario}_r1i1p1f1_gn_2090-01-01_2090-01-15.nc -90:90 0:360 r360x180"
+      ],
+      "dependencies": [
+        {
+          "task": "Export variable"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "End iteration on variables",
+      "operator": "oph_endfor",
+      "arguments": [],
+      "dependencies": [
+        {
+          "task": "Regrid variable"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "Python script",
+      "operator": "oph_script",
+      "arguments": [
+        "script=/path/to/fires.sh",
+        "args=/data/fires/output/ @model @scenario tos"
+      ],
+      "dependencies": [
+        {
+          "task": "End iteration on variables"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "Import model",
+      "operator": "oph_importnc2",
+      "arguments": [
+        "imp_dim=time",
+        "measure=tos",
+        "input=/data/fires/output/@{model}_@{scenario}.nc",
+        "container=fires",
+        "nfrag=1",
+        "imp_concept_level=o"
+      ],
+      "dependencies": [
+        {
+          "task": "Create a work container"
+        },
+        {
+          "task": "Python script"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "Reduction on years",
+      "operator": "oph_reduce2",
+      "arguments": [
+        "operation=avg",
+        "concept_level=y"
+      ],
+      "dependencies": [
+        {
+          "argument": "cube",
+          "task": "Import model"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "End iteration on models",
+      "operator": "oph_endfor",
+      "arguments": [],
+      "dependencies": [
+        {
+          "argument": "cube",
+          "task": "Reduction on years"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "Merge models",
+      "operator": "oph_mergecubes2",
+      "arguments": [
+        "dim=ensemble"
+      ],
+      "dependencies": [
+        {
+          "argument": "cubes",
+          "task": "End iteration on models"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "Iterate on ensemble operations",
+      "operator": "oph_for",
+      "arguments": [
+        "parallel=yes",
+        "key=operation",
+        "values=avg|min|max|var|std"
+      ],
+      "dependencies": [
+        {
+          "argument": "cube",
+          "task": "Merge models"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "Ensemble operation",
+      "operator": "oph_reduce2",
+      "arguments": [
+        "operation=@{operation}",
+        "dim=ensemble"
+      ],
+      "dependencies": [
+        {
+          "argument": "cube",
+          "task": "Iterate on ensemble operations"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "Export scenario",
+      "operator": "oph_exportnc2",
+      "arguments": [
+        "output=/data/fires/output/@{operation}_@{scenario}.nc"
+      ],
+      "dependencies": [
+        {
+          "argument": "cube",
+          "task": "Ensemble operation"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "End iteration on ensemble operations",
+      "operator": "oph_endfor",
+      "arguments": [],
+      "dependencies": [
+        {
+          "task": "Export scenario"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "End iteration on scenarios",
+      "operator": "oph_endfor",
+      "arguments": [],
+      "dependencies": [
+        {
+          "task": "End iteration on ensemble operations"
+        }
+      ]
+    }
+  ],
+  "on_exit": "oph_delete",
+  "nthreads": "1",
+  "ncores": "1"
+}
