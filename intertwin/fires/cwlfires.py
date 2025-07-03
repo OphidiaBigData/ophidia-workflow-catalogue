@@ -4,13 +4,13 @@ import sys
 from pyophidia import Client, Experiment, Workflow #, Cube
 
 # Input parameters
-input_folder="/data/fires/@{model}/@{scenario}/@{variable}/" # "/data/products/ESGF/CMIP6/ScenarioMIP/CMCC/@model/@scenario/r1i1p1f1/day/@variable/gn/"
-input_format="@{variable}_day_@{model}_@{scenario}_r1i1p1f1_gn_*.nc"
+input_folder="/data/fires/@{model}/@{scenario}/@{frequency_&{variable}}/@{variable}/" # "/data/products/ESGF/CMIP6/ScenarioMIP/CMCC/@{model}/@{scenario}/r1i1p1f1/@{frequency_&{variable}}/@{variable}/gn/"
+input_format="@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_*.nc"
 lat_range="-90:90"
 lon_range="0:360"
 time_range="2090-01-01_2090-01-15"
 output_folder="/data/fires/output/"
-output_format="@{variable}_day_@{model}_@{scenario}_r1i1p1f1_gn_" + time_range.replace(':','') + ".nc"
+output_format="@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_" + time_range.replace(':','') + ".nc"
 regrid_script="/path/to/regrid.sh"
 new_grid="r360x180"
 python_script="/path/to/fires.sh"
@@ -41,6 +41,8 @@ wf.monitor(frequency=1, iterative=True, display=display)
 print("Workflow completed")
 
 #wf.build_provenance("Fires",output_format="json",display=display)
+
+cli.submit("oph_delete cube=[*];exec_mode=async;", display=False)
 
 #Cube.cluster(action='undeploy',host_partition=partition,exec_mode='async')
 

@@ -20,10 +20,32 @@ outputs:
     outputSource: End_iteration_on_scenarios/experiment
 
 steps:
+  Init_frequency:
+    run: tasks/set.cwl
+    in:
+      experiment: inputexperiment
+      name:
+        default: "Init frequency"
+      key:
+        default: "frequency"
+      value:
+        default: "day"
+    out: [experiment]
+  Init_measure:
+    run: tasks/set.cwl
+    in:
+      experiment: Init_frequency/experiment
+      name:
+        default: "Init measure"
+      key:
+        default: "measure"
+      value:
+        default: "pr"
+    out: [experiment]
   Create_a_work_container:
     run: tasks/createcontainer.cwl
     in:
-      experiment: inputexperiment
+      experiment: Init_measure/experiment
       name:
         default: "Create a work container"
       container:
@@ -85,7 +107,7 @@ steps:
       measure:
         default: "@variable"
       src_path:
-        default: "/data/fires/@{model}/@{scenario}/@{variable}/@{variable}_day_@{model}_@{scenario}_r1i1p1f1_gn_*.nc"
+        default: "/data/fires/@{model}/@{scenario}/@{frequency_&{variable}}/@{variable}/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_*.nc"
       container:
         default: "fires"
       subset_dims:
@@ -97,10 +119,21 @@ steps:
       nfrag: nthreads
       nthreads: nthreads
     out: [experiment]
+  Check_for_reduction_operation:
+    run: tasks/if.cwl
+    in:
+      experiment: Import_variable/experiment
+      name:
+        default: "Check for reduction operation"
+      condition:
+        default: "&{variable}"
+      forward:
+        default: "yes"
+    out: [experiment]
   Reduction_on_octets:
     run: tasks/reduce2.cwl
     in:
-      experiment: Import_variable/experiment
+      experiment: Check_for_reduction_operation/experiment
       name:
         default: "Reduction on octets"
       operation:
@@ -108,14 +141,23 @@ steps:
       concept_level:
         default: "o"
     out: [experiment]
+  End_check:
+    run: tasks/endif.cwl
+    in:
+      experiment:
+        source: Reduction_on_octets/experiment
+        valueFrom: ${ return [ self ]; }
+      name:
+        default: "End check"
+    out: [experiment]
   Export_variable:
     run: tasks/exportnc2.cwl
     in:
-      experiment: Reduction_on_octets/experiment
+      experiment: End_check/experiment
       name:
         default: "Export variable"
       output:
-        default: "/data/fires/output/@{variable}_day_@{model}_@{scenario}_r1i1p1f1_gn_2090-01-01_2090-01-15.nc"
+        default: "/data/fires/output/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_2090-01-01_2090-01-15.nc"
     out: [experiment]
   Regrid_variable:
     run: tasks/script.cwl
@@ -126,7 +168,7 @@ steps:
       script:
         default: "/path/to/regrid.sh"
       args:
-        default: "/data/fires/output/@{variable}_day_@{model}_@{scenario}_r1i1p1f1_gn_2090-01-01_2090-01-15.nc -90:90 0:360 r360x180"
+        default: "/data/fires/output/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_2090-01-01_2090-01-15.nc -90:90 0:360 r360x180"
     out: [experiment]
   End_iteration_on_variables:
     run: tasks/endfor.cwl

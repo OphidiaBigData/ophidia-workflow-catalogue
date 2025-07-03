@@ -4,13 +4,13 @@ import sys
 from pyophidia import Client, Experiment, Workflow #, Cube
 
 # Input parameters
-input_folder="/data/fires/@{model}/@{scenario}/@{variable}/" # "/data/products/ESGF/CMIP6/ScenarioMIP/CMCC/@model/@scenario/r1i1p1f1/day/@variable/gn/"
-input_format="@{variable}_day_@{model}_@{scenario}_r1i1p1f1_gn_*.nc"
+input_folder="/data/fires/@{model}/@{scenario}/@{frequency_&{variable}}/@{variable}/" # "/data/products/ESGF/CMIP6/ScenarioMIP/CMCC/@{model}/@{scenario}/r1i1p1f1/@{frequency_&{variable}}/@{variable}/gn/"
+input_format="@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_*.nc"
 lat_range="-90:90"
 lon_range="0:360"
 time_range="2090-01-01_2090-01-15"
 output_folder="/data/fires/output/"
-output_format="@{variable}_day_@{model}_@{scenario}_r1i1p1f1_gn_" + time_range.replace(':','') + ".nc"
+output_format="@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_" + time_range.replace(':','') + ".nc"
 regrid_script="/path/to/regrid.sh"
 new_grid="r360x180"
 python_script="/path/to/fires.sh"
@@ -39,14 +39,25 @@ exp = Experiment(name="Fires",
                 nthreads=threads,
                 ncores=cores)
 
+ti1 = exp.newTask(name="Init frequency",
+                operator="oph_set",
+                arguments={"key": "frequency", "value": "day"}) # "Eday|day|day|day|day|fx"
+
+ti2 = exp.newTask(name="Init measure",
+                operator="oph_set",
+                arguments={"key": "measure", "value": "pr"}, # "lai|lst_day|rel_hum|t2m_min|pr|lsm"
+                dependencies={ti1:''})
+
 tc = exp.newTask(name="Create a work container",
                 operator="oph_createcontainer",
                 on_error="skip",
-                arguments={"container": container, "dim": "time|lat|lon", "hierarchy": "oph_time|oph_base|oph_base"})
+                arguments={"container": container, "dim": "time|lat|lon", "hierarchy": "oph_time|oph_base|oph_base"},
+                dependencies={ti2:''})
 
 tf1 = exp.newTask(name="Iterate on scenarios",
                 operator="oph_for",
-                arguments={"parallel": "yes", "key": "scenario", "values": "ssp126"}) # "ssp126|ssp245|ssp370|ssp585"
+                arguments={"parallel": "yes", "key": "scenario", "values": "ssp126"}, # "ssp126|ssp245|ssp370|ssp585"
+                dependencies={tc:''})
 
 tf2 = exp.newTask(name="Iterate on models",
                 operator="oph_for",
@@ -61,17 +72,32 @@ tf3 = exp.newTask(name="Iterate on variables",
 tp1 = exp.newTask(name="Import variable",
                 operator="oph_importncs",
                 arguments={"imp_dim": "time", "measure": "@variable", "src_path": input_folder + input_format, "container": container, "nfrag": threads, "subset_dims": "time", "subset_filter": time_range, "subset_type": "coord"},
-                dependencies={tc:'', tf3:''})
+                dependencies={tf3:''})
 
-tp2 = exp.newTask(name="Reduction on octets",
+tp2a = exp.newTask(name="Check for reduction operation",
+                operator="oph_if",
+                arguments={"condition": "&{variable}", "forward": "yes"}, # Set a condition to be 0 only in case the variable is "sftlf"
+                dependencies={tp1:'cube'})
+
+tp2b = exp.newTask(name="Reduction on octets",
                 operator="oph_reduce2",
                 arguments={"operation": "median", "concept_level": "o"},
-                dependencies={tp1:'cube'})
+                dependencies={tp2a:'cube'})
+
+tp2c = exp.newTask(name="End check",
+                operator="oph_endif",
+                arguments={},
+                dependencies={tp2b:'cube'})
+
+tp2d = exp.newTask(name="Rename measure",
+                operator="oph_apply",
+                arguments={"measure": "@{measure_&{variable}}"},
+                dependencies={tp2c:'cube'})
 
 tp3 = exp.newTask(name="Export variable",
                 operator="oph_exportnc2",
                 arguments={"output": output_folder + output_format},
-                dependencies={tp2:'cube'})
+                dependencies={tp2d:'cube'})
 
 tp4 = exp.newTask(name="Regrid variable",
                 operator="oph_script",
@@ -91,7 +117,7 @@ tm0 = exp.newTask(name="Python script",
 tm1 = exp.newTask(name="Import model",
                 operator="oph_importnc2",
                 arguments={"imp_dim": "time", "measure": fires_index, "input": output_folder + model_format, "container": container, "nfrag": threads, "imp_concept_level": "o"},
-                dependencies={tc:'', tm0:''})
+                dependencies={tm0:''})
 
 tm2 = exp.newTask(name="Reduction on years",
                 operator="oph_reduce2",

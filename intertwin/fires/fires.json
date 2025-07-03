@@ -6,6 +6,30 @@
   "tasks": [
     {
       "type": "ophidia",
+      "name": "Init frequency",
+      "operator": "oph_set",
+      "arguments": [
+        "key=frequency",
+        "value=day"
+      ],
+      "dependencies": []
+    },
+    {
+      "type": "ophidia",
+      "name": "Init measure",
+      "operator": "oph_set",
+      "arguments": [
+        "key=measure",
+        "value=pr"
+      ],
+      "dependencies": [
+        {
+          "task": "Init frequency"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
       "name": "Create a work container",
       "operator": "oph_createcontainer",
       "arguments": [
@@ -13,7 +37,11 @@
         "dim=time|lat|lon",
         "hierarchy=oph_time|oph_base|oph_base"
       ],
-      "dependencies": [],
+      "dependencies": [
+        {
+          "task": "Init measure"
+        }
+      ],
       "on_error": "skip"
     },
     {
@@ -25,7 +53,11 @@
         "key=scenario",
         "values=ssp126"
       ],
-      "dependencies": []
+      "dependencies": [
+        {
+          "task": "Create a work container"
+        }
+      ]
     },
     {
       "type": "ophidia",
@@ -64,7 +96,7 @@
       "arguments": [
         "imp_dim=time",
         "measure=@variable",
-        "src_path=/data/fires/@{model}/@{scenario}/@{variable}/@{variable}_day_@{model}_@{scenario}_r1i1p1f1_gn_*.nc",
+        "src_path=/data/fires/@{model}/@{scenario}/@{frequency_&{variable}}/@{variable}/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_*.nc",
         "container=fires",
         "nfrag=1",
         "subset_dims=time",
@@ -73,10 +105,22 @@
       ],
       "dependencies": [
         {
-          "task": "Create a work container"
-        },
-        {
           "task": "Iterate on variables"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "Check for reduction operation",
+      "operator": "oph_if",
+      "arguments": [
+        "condition=1",
+        "forward=yes"
+      ],
+      "dependencies": [
+        {
+          "argument": "cube",
+          "task": "Import variable"
         }
       ]
     },
@@ -91,17 +135,15 @@
       "dependencies": [
         {
           "argument": "cube",
-          "task": "Import variable"
+          "task": "Check for reduction operation"
         }
       ]
     },
     {
       "type": "ophidia",
-      "name": "Export variable",
-      "operator": "oph_exportnc2",
-      "arguments": [
-        "output=/data/fires/output/@{variable}_day_@{model}_@{scenario}_r1i1p1f1_gn_2090-01-01_2090-01-15.nc"
-      ],
+      "name": "End check",
+      "operator": "oph_endif",
+      "arguments": [],
       "dependencies": [
         {
           "argument": "cube",
@@ -111,11 +153,39 @@
     },
     {
       "type": "ophidia",
+      "name": "Rename measure",
+      "operator": "oph_apply",
+      "arguments": [
+        "measure=@{measure_&{variable}}"
+      ],
+      "dependencies": [
+        {
+          "argument": "cube",
+          "task": "End check"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "Export variable",
+      "operator": "oph_exportnc2",
+      "arguments": [
+        "output=/data/fires/output/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_2090-01-01_2090-01-15.nc"
+      ],
+      "dependencies": [
+        {
+          "argument": "cube",
+          "task": "Rename measure"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
       "name": "Regrid variable",
       "operator": "oph_script",
       "arguments": [
         "script=/path/to/regrid.sh",
-        "args=/data/fires/output/@{variable}_day_@{model}_@{scenario}_r1i1p1f1_gn_2090-01-01_2090-01-15.nc -90:90 0:360 r360x180"
+        "args=/data/fires/output/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_2090-01-01_2090-01-15.nc -90:90 0:360 r360x180"
       ],
       "dependencies": [
         {
@@ -161,9 +231,6 @@
         "imp_concept_level=o"
       ],
       "dependencies": [
-        {
-          "task": "Create a work container"
-        },
         {
           "task": "Python script"
         }
