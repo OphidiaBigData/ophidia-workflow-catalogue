@@ -5,12 +5,13 @@ from pyophidia import Client, Experiment, Workflow #, Cube
 
 # Input parameters
 input_folder="/data/fires/@{model}/@{scenario}/@{frequency_&{variable}}/@{variable}/" # "/data/products/ESGF/CMIP6/ScenarioMIP/CMCC/@{model}/@{scenario}/r1i1p1f1/@{frequency_&{variable}}/@{variable}/gn/"
-input_format="@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_*.nc"
+base_format="@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn"
+input_format=base_format + "*.nc"
 lat_range="-90:90"
 lon_range="0:360"
 time_range="2090-01-01_2090-01-15"
 output_folder="/data/fires/output/"
-output_format="@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_" + time_range.replace(':','') + ".nc"
+output_format=base_format + "_" + time_range.replace(':','') + ".nc"
 regrid_script="/path/to/regrid.sh"
 new_grid="r360x180"
 python_script="/path/to/fires.sh"
@@ -51,7 +52,7 @@ ti2 = exp.newTask(name="Init measure",
 tc = exp.newTask(name="Create a work container",
                 operator="oph_createcontainer",
                 on_error="skip",
-                arguments={"container": container, "dim": "time|lat|lon", "hierarchy": "oph_time|oph_base|oph_base"},
+                arguments={"container": container, "dim": "time|plev|lat|lon", "hierarchy": "oph_time|oph_base|oph_base|oph_base"},
                 dependencies={ti2:''})
 
 tf1 = exp.newTask(name="Iterate on scenarios",
@@ -69,35 +70,45 @@ tf3 = exp.newTask(name="Iterate on variables",
                 arguments={"parallel": "yes", "key": "variable", "values": "pr"}, # "lai|tas|hur|tasmin|pr|sftlf"
                 dependencies={tf2:''})
 
-tp1 = exp.newTask(name="Import variable",
-                operator="oph_importncs",
-                arguments={"imp_dim": "time", "measure": "@variable", "src_path": input_folder + input_format, "container": container, "nfrag": threads, "subset_dims": "time", "subset_filter": time_range, "subset_type": "coord"},
+tp1a = exp.newTask(name="Check for reduction operation",
+                operator="oph_if",
+                arguments={"condition": "&{variable}-6"}, # Set a condition to be 0 only in case the variable is "sftlf"
                 dependencies={tf3:''})
 
-tp2a = exp.newTask(name="Check for reduction operation",
-                operator="oph_if",
-                arguments={"condition": "&{variable}", "forward": "yes"}, # Set a condition to be 0 only in case the variable is "sftlf"
-                dependencies={tp1:'cube'})
+tp1b = exp.newTask(name="Import variable",
+                operator="oph_importncs",
+                arguments={"imp_dim": "time", "measure": "@variable", "src_path": input_folder + input_format, "container": container, "nfrag": threads, "subset_dims": "time", "subset_filter": time_range, "subset_type": "coord"},
+                dependencies={tp1a:''})
 
-tp2b = exp.newTask(name="Reduction on octets",
+tp1c = exp.newTask(name="Reduction on octets",
                 operator="oph_reduce2",
                 arguments={"operation": "median", "concept_level": "o"},
-                dependencies={tp2a:'cube'})
+                dependencies={tp1b:'cube'})
 
-tp2c = exp.newTask(name="End check",
+tp1d = exp.newTask(name="Else",
+                operator="oph_else",
+                arguments={},
+                dependencies={tp1a:''})
+
+tp1e = exp.newTask(name="Import sftlf",
+                operator="oph_importnc2",
+                arguments={"measure": "@variable", "src_path": input_folder + input_format.replace('*',''), "container": container, "nfrag": "1"},
+                dependencies={tp1d:''})
+
+tp1f = exp.newTask(name="End check",
                 operator="oph_endif",
                 arguments={},
-                dependencies={tp2b:'cube'})
+                dependencies={tp1c:'cube', tp1e:'cube'})
 
 tp2d = exp.newTask(name="Rename measure",
                 operator="oph_apply",
                 arguments={"measure": "@{measure_&{variable}}"},
-                dependencies={tp2c:'cube'})
+                dependencies={tp1f:'cube'})
 
 tp3 = exp.newTask(name="Export variable",
                 operator="oph_exportnc2",
                 arguments={"output": output_folder + output_format},
-                dependencies={tp2d:'cube'})
+                dependencies={tp2:'cube'})
 
 tp4 = exp.newTask(name="Regrid variable",
                 operator="oph_script",

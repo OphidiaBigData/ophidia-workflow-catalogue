@@ -51,9 +51,9 @@ steps:
       container:
         default: "fires"
       dim:
-        default: "time|lat|lon"
+        default: "time|plev|lat|lon"
       hierarchy:
-        default: "oph_time|oph_base|oph_base"
+        default: "oph_time|oph_base|oph_base|oph_base"
       on_error:
         default: "skip"
     out: [experiment]
@@ -96,10 +96,21 @@ steps:
       values:
         default: "pr"
     out: [experiment]
+  Check_for_reduction_operation:
+    run: tasks/if.cwl
+    in:
+      experiment: Iterate_on_variables/experiment
+      name:
+        default: "Check for reduction operation"
+      condition:
+        default: "&{variable}"
+      forward:
+        default: "yes"
+    out: [experiment]
   Import_variable:
     run: tasks/importncs.cwl
     in:
-      experiment: Iterate_on_variables/experiment
+      experiment: Check_for_reduction_operation/experiment
       name:
         default: "Import variable"
       imp_dim:
@@ -107,7 +118,7 @@ steps:
       measure:
         default: "@variable"
       src_path:
-        default: "/data/fires/@{model}/@{scenario}/@{frequency_&{variable}}/@{variable}/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_*.nc"
+        default: "/data/fires/@{model}/@{scenario}/@{frequency_&{variable}}/@{variable}/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn*.nc"
       container:
         default: "fires"
       subset_dims:
@@ -119,21 +130,10 @@ steps:
       nfrag: nthreads
       nthreads: nthreads
     out: [experiment]
-  Check_for_reduction_operation:
-    run: tasks/if.cwl
-    in:
-      experiment: Import_variable/experiment
-      name:
-        default: "Check for reduction operation"
-      condition:
-        default: "&{variable}"
-      forward:
-        default: "yes"
-    out: [experiment]
   Reduction_on_octets:
     run: tasks/reduce2.cwl
     in:
-      experiment: Check_for_reduction_operation/experiment
+      experiment: Import_variable/experiment
       name:
         default: "Reduction on octets"
       operation:
@@ -141,19 +141,50 @@ steps:
       concept_level:
         default: "o"
     out: [experiment]
+  Else:
+    run: tasks/else.cwl
+    in:
+      experiment: Check_for_reduction_operation/experiment
+      name:
+        default: "Else"
+    out: [experiment]
+  Import_sftlf:
+    run: tasks/importnc2.cwl
+    in:
+      experiment: Else/experiment
+      name:
+        default: "Import sftlf"
+      imp_dim:
+        default: "time"
+      measure:
+        default: "@variable"
+      src_path:
+        default: "/data/fires/@{model}/@{scenario}/@{frequency_&{variable}}/@{variable}/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn.nc"
+      container:
+        default: "fires"
+      nfrag:
+        default: 1
+    out: [experiment]
   End_check:
     run: tasks/endif.cwl
     in:
-      experiment:
-        source: Reduction_on_octets/experiment
-        valueFrom: ${ return [ self ]; }
+      experiment: [Reduction_on_octets/experiment, Import_sftlf/experiment]
       name:
         default: "End check"
+    out: [experiment]
+  Rename_measure:
+    run: tasks/apply.cwl
+    in:
+      experiment: End_check/experiment
+      name:
+        default: "Rename measure"
+      measure:
+        default: "@{measure_&{variable}}"
     out: [experiment]
   Export_variable:
     run: tasks/exportnc2.cwl
     in:
-      experiment: End_check/experiment
+      experiment: Rename_measure/experiment
       name:
         default: "Export variable"
       output:

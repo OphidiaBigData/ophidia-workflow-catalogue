@@ -34,8 +34,8 @@
       "operator": "oph_createcontainer",
       "arguments": [
         "container=fires",
-        "dim=time|lat|lon",
-        "hierarchy=oph_time|oph_base|oph_base"
+        "dim=time|plev|lat|lon",
+        "hierarchy=oph_time|oph_base|oph_base|oph_base"
       ],
       "dependencies": [
         {
@@ -91,17 +91,10 @@
     },
     {
       "type": "ophidia",
-      "name": "Import variable",
-      "operator": "oph_importncs",
+      "name": "Check for reduction operation",
+      "operator": "oph_if",
       "arguments": [
-        "imp_dim=time",
-        "measure=@variable",
-        "src_path=/data/fires/@{model}/@{scenario}/@{frequency_&{variable}}/@{variable}/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_*.nc",
-        "container=fires",
-        "nfrag=1",
-        "subset_dims=time",
-        "subset_filter=2090-01-01_2090-01-15",
-        "subset_type=coord"
+        "condition=&{variable}-6"
       ],
       "dependencies": [
         {
@@ -111,16 +104,21 @@
     },
     {
       "type": "ophidia",
-      "name": "Check for reduction operation",
-      "operator": "oph_if",
+      "name": "Import variable",
+      "operator": "oph_importncs",
       "arguments": [
-        "condition=1",
-        "forward=yes"
+        "imp_dim=time",
+        "measure=@variable",
+        "src_path=/data/fires/@{model}/@{scenario}/@{frequency_&{variable}}/@{variable}/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn*.nc",
+        "container=fires",
+        "nfrag=1",
+        "subset_dims=time",
+        "subset_filter=2090-01-01_2090-01-15",
+        "subset_type=coord"
       ],
       "dependencies": [
         {
-          "argument": "cube",
-          "task": "Import variable"
+          "task": "Check for reduction operation"
         }
       ]
     },
@@ -135,7 +133,34 @@
       "dependencies": [
         {
           "argument": "cube",
+          "task": "Import variable"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "Else",
+      "operator": "oph_else",
+      "arguments": [],
+      "dependencies": [
+        {
           "task": "Check for reduction operation"
+        }
+      ]
+    },
+    {
+      "type": "ophidia",
+      "name": "Import sftlf",
+      "operator": "oph_importnc2",
+      "arguments": [
+        "measure=@variable",
+        "src_path=/data/fires/@{model}/@{scenario}/@{frequency_&{variable}}/@{variable}/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn.nc",
+        "container=fires",
+        "nfrag=1"
+      ],
+      "dependencies": [
+        {
+          "task": "Else"
         }
       ]
     },
@@ -148,6 +173,10 @@
         {
           "argument": "cube",
           "task": "Reduction on octets"
+        },
+        {
+          "argument": "cube",
+          "task": "Import sftlf"
         }
       ]
     },

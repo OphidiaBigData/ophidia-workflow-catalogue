@@ -53,7 +53,13 @@ sed -i "s/YINC/$YINC/g" $FileName.grid
 
 tmp=$FileName.tmp
 
-ncpdq -a time,lat,lon $InFile $tmp
+OUT=0
+ncdump -v plev $InFile > /dev/null 2>&1 || OUT=$?
+if [ $OUT -eq 0 ]; then
+    ncpdq -a time,plev,lat,lon $InFile $tmp
+else
+    ncpdq -a time,lat,lon $InFile $tmp
+fi
 mv $tmp $InFile
 
 cdo remapcon,$FileName.grid $InFile $tmp
