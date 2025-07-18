@@ -100,7 +100,7 @@ tp1f = exp.newTask(name="End check",
                 arguments={},
                 dependencies={tp1c:'cube', tp1e:'cube'})
 
-tp2d = exp.newTask(name="Rename measure",
+tp2 = exp.newTask(name="Rename measure",
                 operator="oph_apply",
                 arguments={"measure": "@{measure_&{variable}}"},
                 dependencies={tp1f:'cube'})
