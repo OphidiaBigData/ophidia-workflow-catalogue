@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: Copyright contributors to the Software Quality Assurance as a Service (SQAaaS) project.
+# SPDX-FileContributor: Pablo Orviz <orviz@ifca.unican.es>
+#
+# SPDX-License-Identifier: GPL-3.0-only
+on: [push]
+jobs:
+  sqaaas_job:
+    runs-on: ubuntu-latest
+    name: Job that triggers SQAaaS platform branch
+    steps:
+      - name: SQAaaS action step
+        uses: eosc-synergy/sqaaas-assessment-action@feature/only_criteria_workflow_raw
+        with: 
+           criteria_workflow_only: 'True'
+           explicit_criteria_workflow: '{"criteria_workflow":[{"id":"QC.Sty","tools":[{"docker":{"dockerfile":"QC.Sty/pyophidia/Dockerfile"},"args":[{"type":"optional","description":"Path to the folder where the workflows are located","value":"examples/","option":"--path","selectable":True,"explicit_paths":True}],"reporting":{"validator":"ophidia","subcriterion":"QC.Sty","requirement_level":"RECOMMENDED","lang_name":"python","tool_name":"find_oph_workflows.py"},"name":"find_oph_workflows.py"}]}]}'
