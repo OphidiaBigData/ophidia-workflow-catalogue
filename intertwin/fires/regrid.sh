@@ -67,6 +67,7 @@ rm -f $TempFile
 mv $tmp $TempFile
 
 cdo -setctomiss,inf -remapcon,$FileName.grid $TempFile $tmp
+rm -f $TempFile
 mv $tmp $TempFile
 
 rm -f $FileName.grid
@@ -75,6 +76,10 @@ while
     if { set -C; 2>/dev/null >~/manlocktest.lock; }; then
         trap "rm -f ~/manlocktest.lock" EXIT
     	ncks -A -v $Variable $TempFile $OutFile
+        ncatted -h -O -a CDO,global,d,, $OutFile
+        ncatted -h -O -a NCO,global,d,, $OutFile
+        ncatted -h -O -a history_of_appended_files,global,d,, $OutFile
+        ncatted -h -O -a history,global,d,, $OutFile
         rm -f $OutFile.*.ncks.tmp
     	rm -f ~/manlocktest.lock
     	break
@@ -83,11 +88,6 @@ while
     fi
 do true; done
 rm -f $TempFile
-
-ncatted -h -O -a CDO,global,d,, $OutFile
-ncatted -h -O -a NCO,global,d,, $OutFile
-ncatted -h -O -a history_of_appended_files,global,d,, $OutFile
-ncatted -h -O -a history,global,d,, $OutFile
 
 else
 
@@ -98,4 +98,5 @@ fi
 fi
 
 exit 0
+
 

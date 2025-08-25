@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 
-target_dir = "/home/jovyan/work/ML4Fires"
+target_dir = "/ML4Fires"
 
 import os, sys
 sys.path.append(target_dir)
 os.chdir(target_dir)
 
 # Arguments
-input_file = sys.argv[1]
-output_file = sys.argv[2]
+output_name = sys.argv[1]
+input_file = sys.argv[2]
+output_file = sys.argv[3]
 
 # Body
 import numpy as np
@@ -28,6 +29,8 @@ from batch_prediction import get_prediction_for_data
 run_name = "model"
 #_ = load_model_from_mlflow(run_name, provenance=True)
 
-prediction = get_prediction_for_data(dataset_path=input_file, model_path=f"MLFLOW/{run_name}/last_model/data/model.pth", verbose=False)
-
+prediction = get_prediction_for_data(dataset_path=input_file,
+                                     model_path=f"MLFLOW/{run_name}/last_model/data/model.pth",
+                                     output_name=output_name)
 prediction.to_netcdf(output_file)
+
