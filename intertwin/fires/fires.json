@@ -42,7 +42,7 @@
       "name": "Clear output folder",
       "operator": "oph_generic",
       "arguments": [
-        "command=/data/fires/clear.sh",
+        "command=/path/to/clear.sh",
         "input=/data/fires/output/",
         "output=null"
       ],
@@ -339,7 +339,7 @@
       "name": "Regrid variable",
       "operator": "oph_generic",
       "arguments": [
-        "command=/data/fires/regrid.sh",
+        "command=/path/to/regrid.sh",
         "output=/data/fires/output/regridded_@{model}_@{scenario}.nc",
         "args=-90:90 0:360 r360x180 @{measure_&{variable}}"
       ],
@@ -368,7 +368,7 @@
       "name": "Infer data",
       "operator": "oph_generic",
       "arguments": [
-        "command=/data/fires/inference.py",
+        "command=/path/to/inference.py",
         "input=/data/fires/output/regridded_@{model}_@{scenario}.nc",
         "output=/data/fires/output/fires_@{model}_@{scenario}.nc",
         "args=global_burned_areas"

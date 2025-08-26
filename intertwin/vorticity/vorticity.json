@@ -9,7 +9,7 @@
       "name": "Initialization",
       "operator": "oph_script",
       "arguments": [
-        "script=/home/jovyan/work/vorticity/linkinput.sh",
+        "script=/path/to/linkinput.sh",
         "args=1 *_201*.nc"
       ],
       "dependencies": [],
@@ -38,7 +38,7 @@
       "arguments": [
         "imp_dim=lat",
         "measure=lat",
-        "input=/home/jovyan/data/CMIP6/HighResMIP/CMCC/CMCC-CM2-VHR4/highres-future/r1i1p1f1/6hrPlevPt/psl/gn/v20190509/psl_6hrPlevPt_CMCC-CM2-VHR4_highres-future_r1i1p1f1_gn_201501010000-201501311800.nc",
+        "input=/data/CMIP6/HighResMIP/CMCC/CMCC-CM2-VHR4/highres-future/r1i1p1f1/6hrPlevPt/psl/gn/v20190509/psl_6hrPlevPt_CMCC-CM2-VHR4_highres-future_r1i1p1f1_gn_201501010000-201501311800.nc",
         "container=wind",
         "nfrag=1",
         "subset_dims=lat",
@@ -106,7 +106,7 @@
       "arguments": [
         "parallel=yes",
         "key=source",
-        "input=[/home/jovyan/work/vorticity/input/ua_*.nc]"
+        "input=[/data/vorticity/input/ua_*.nc]"
       ],
       "dependencies": [
         {
@@ -138,7 +138,7 @@
       "arguments": [
         "imp_dim=lat",
         "measure=psl",
-        "input=/home/jovyan/work/vorticity/input/psl_@{source_file+3}",
+        "input=/data/vorticity/input/psl_@{source_file+3}",
         "container=wind_&{source}",
         "nfrag=1",
         "subset_dims=lat|lon",
@@ -172,7 +172,7 @@
       "name": "Export PSL",
       "operator": "oph_exportnc2",
       "arguments": [
-        "output=/home/jovyan/work/vorticity/output/psl_@{source_file+3}"
+        "output=/data/vorticity/output/psl_@{source_file+3}"
       ],
       "dependencies": [
         {
@@ -187,8 +187,8 @@
       "name": "Regrid PSL",
       "operator": "oph_generic",
       "arguments": [
-        "command=/home/jovyan/work/vorticity/regrid.sh",
-        "output=/home/jovyan/work/vorticity/output/regridded_psl_@{source_file+3}",
+        "command=/path/to/regrid.sh",
+        "output=/data/vorticity/output/regridded_psl_@{source_file+3}",
         "args=0:70 100:320 r880x280"
       ],
       "dependencies": [
@@ -206,7 +206,7 @@
       "arguments": [
         "imp_dim=lat",
         "measure=ua",
-        "input=/home/jovyan/work/vorticity/input/ua_@{source_file+3}",
+        "input=/data/vorticity/input/ua_@{source_file+3}",
         "container=wind_&{source}",
         "nfrag=1",
         "subset_dims=plev|lat|lon",
@@ -291,7 +291,7 @@
       "arguments": [
         "imp_dim=lon",
         "measure=va",
-        "input=/home/jovyan/work/vorticity/input/va_@{source_file+3}",
+        "input=/data/vorticity/input/va_@{source_file+3}",
         "container=wind_&{source}",
         "nfrag=1",
         "subset_dims=plev|lat|lon",
@@ -415,7 +415,7 @@
       "name": "Export VO",
       "operator": "oph_exportnc2",
       "arguments": [
-        "output=/home/jovyan/work/vorticity/output/vo_@{source_file+3}"
+        "output=/data/vorticity/output/vo_@{source_file+3}"
       ],
       "dependencies": [
         {
@@ -430,8 +430,8 @@
       "name": "Regrid VO",
       "operator": "oph_generic",
       "arguments": [
-        "command=/home/jovyan/work/vorticity/regrid.sh",
-        "output=/home/jovyan/work/vorticity/output/regridded_vo_@{source_file+3}",
+        "command=/path/to/regrid.sh",
+        "output=/data/vorticity/output/regridded_vo_@{source_file+3}",
         "args=0:70 100:320 r880x280"
       ],
       "dependencies": [
@@ -447,8 +447,8 @@
       "name": "Merge outputs",
       "operator": "oph_generic",
       "arguments": [
-        "command=/home/jovyan/work/vorticity/merge.sh",
-        "output=/home/jovyan/work/vorticity/output/both_@{source_file+3}",
+        "command=/path/to/merge.sh",
+        "output=/data/vorticity/output/both_@{source_file+3}",
         "args=msl"
       ],
       "dependencies": [

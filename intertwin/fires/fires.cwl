@@ -62,7 +62,7 @@ steps:
       name:
         default: "Clear output folder"
       command:
-        default: "/data/fires/clear.sh"
+        default: "/path/to/clear.sh"
       input:
         default: "/data/fires/output/"
       output:
@@ -299,7 +299,7 @@ steps:
       name:
         default: "Regrid variable"
       command:
-        default: "/data/fires/regrid.sh"
+        default: "/path/to/regrid.sh"
       args:
         default: "-90:90 0:360 r360x180 @{measure_&{variable}}"
       input:
@@ -327,7 +327,7 @@ steps:
       name:
         default: "Infer data"
       command:
-        default: "/data/fires/fires.sh"
+        default: "/path/to/fires.sh"
       input:
         default: "/data/fires/output/regridded_@{model}_@{scenario}.nc"
       output:

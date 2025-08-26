@@ -6,26 +6,49 @@ label: This workflow evaluate the wind vorticity dv/dlon - du/dlat given the win
 
 requirements:
   MultipleInputFeatureRequirement: {}
+  InlineJavascriptRequirement: {}
+  StepInputExpressionRequirement: {}
 
 inputs:
   inputexperiment:
     type: File?
   nthreads: int
+  lon_file: string
+  container: string
+  lat_range: string
+  space_range: string
+  number_of_files: int
+  query_on_files: string
+  output_variable1: string
+  output_variable2: string
 
 outputs:
   outputexperiment:
     type: File
-    outputSource: End_iteration/experiment
+    outputSource: Destroy_the_work_container/experiment
 
 steps:
-  Create_a_work_container:
-    run: tasks/createcontainer.cwl
+  Initialization:
+    run: tasks/script.cwl
     in:
       experiment: inputexperiment
       name: 
+        default: "Initialization"
+      script: 
+        default: "/path/to/linkinput.sh"
+      args:
+        valueFrom: $(inputs.number_of_files) $(inputs.query_on_files)
+      number_of_files: number_of_files
+      query_on_files: query_on_files
+    out: [experiment]
+
+  Create_a_work_container:
+    run: tasks/createcontainer.cwl
+    in:
+      experiment: Initialization/experiment
+      name: 
         default: "Create a work container"
-      container:
-        default: "wind"
+      container: container
       dim:
         default: "time|plev|lat|lon"
       on_error:
@@ -38,31 +61,50 @@ steps:
       experiment: Create_a_work_container/experiment
       name:
         default: "Get latitude"
-      src_path:
-        default: "/data/vorticity/input/psl_6hrPlevPt_CMCC-CM2-VHR4_highresSST-future_r1i1p1f1_gn_201502010000-201502010600.nc"
+      src_path: lon_file
       measure:
         default: "lat"
       imp_dim:
         default: "lat"
-      container:
-        default: "wind"
+      container: container
       nfrag:
         default: 1
       subset_dims:
         default: "lat"
-      subset_filter:
-        default: "0:70"
+      subset_filter: lat_range
       subset_type:
         default: "coord"
     out: [experiment]
-  Evaluate_latitude_factor:
+  Change_unit_of_latitude:
     run: tasks/apply.cwl
     in:
       experiment: Get_latitude/experiment
       name:
+        default: "Change unit of latitude"
+      query:
+        default: "oph_matheval('oph_double','oph_float',measure,'pi*x/180')"
+    out: [experiment]
+  Evaluate_ray_factor:
+    run: tasks/apply.cwl
+    in:
+      experiment: Change_unit_of_latitude/experiment
+      name:
+        default: "Evaluate ray factor"
+      query:
+        default: "oph_matheval(measure,'6378137*6356702/sqrt((6378137*sin(x))^2+(6356702*cos(x))^2)*pi/180')"
+      measure_type:
+        default: "auto"
+    out: [experiment]
+  Evaluate_latitude_factor:
+    run: tasks/apply.cwl
+    in:
+      experiment: Change_unit_of_latitude/experiment
+      name:
         default: "Evaluate latitude factor"
       query:
-        default: "oph_matheval('oph_double','oph_float',measure,'cos(pi*x/180)')"
+        default: "oph_matheval(measure,'6378137*6356702/sqrt((6378137*tan(x))^2+(6356702)^2)*pi/180')"
+      measure_type:
+        default: "auto"
     out: [experiment]
 
   Iterate_on_time:
@@ -91,36 +133,48 @@ steps:
         default: "psl"
       imp_dim:
         default: "lat"
-      container:
-        default: "wind"
+      container: container
       subset_dims:
         default: "lat|lon"
-      subset_filter:
-        default: "0:70|100:320"
+      subset_filter: space_range
       subset_type:
         default: "coord"
       nfrag: nthreads
       nthreads: nthreads
     out: [experiment]
+  Rename_measure:
+    run: tasks/apply.cwl
+    in:
+      experiment: Import_PSL/experiment
+      name:
+        default: "Rename measure"
+      measure: output_variable1
+    out: [experiment]
   Export_PSL:
     run: tasks/exportnc2.cwl
     in:
-      experiment: Import_PSL/experiment
+      experiment: Rename_measure/experiment
       name:
         default: "Export PSL"
       output:
         default: "/data/vorticity/output/@{source_file}"
     out: [experiment]
   Regrid_PSL:
-    run: tasks/script.cwl
+    run: tasks/generic.cwl
     in:
-      experiment: Export_PSL/experiment
+      experiment:
+        source: Export_PSL/experiment
+        valueFrom: ${ return [ self ]; }
       name:
         default: "Regrid PSL"
       command:
         default: "/path/to/regrid.sh"
       args:
-        default: "/data/vorticity/output/@{source_file} 0:70 100:320 r880x280"
+        default: "0:70 100:320 r880x280"
+      input:
+        default: "/data/vorticity/output/@{source_file}"
+      output:
+        default: "/data/vorticity/output/regridded_@{source_file}"
     out: [experiment]
 
   Import_U:
@@ -130,13 +184,12 @@ steps:
       name:
         default: "Import U"
       src_path:
-        default: "@{source_path}/ua_@{source_file+4}"
+        default: "/data/vorticity/input/ua_@{source_file+4}"
       measure:
         default: "ua"
       imp_dim:
         default: "lat"
-      container:
-        default: "wind"
+      container: container
       subset_dims:
         default: "plev|lat|lon"
       subset_filter:
@@ -146,10 +199,22 @@ steps:
       nfrag: nthreads
       nthreads: nthreads
     out: [experiment]
+  Put_ray_factor:
+    run: tasks/intercube.cwl
+    in:
+      experiment1: Import_U/experiment
+      experiment2: Evaluate_ray_factor/experiment
+      name:
+        default: "Put ray factor"
+      operation:
+        default: "div"
+      cube2_is_array:
+        default: "yes"
+    out: [experiment]
   Evaluate_du_dlat:
     run: tasks/apply.cwl
     in:
-      experiment: Import_U/experiment
+      experiment: Put_ray_factor/experiment
       name:
         default: "Evaluate du/dlat"
       query:
@@ -181,13 +246,12 @@ steps:
       name:
         default: "Import V"
       src_path:
-        default: "@{source_path}/va_@{source_file+4}"
+        default: "/data/vorticity/input/va_@{source_file+4}"
       measure:
         default: "va"
       imp_dim:
         default: "lon"
-      container:
-        default: "wind"
+      container: container
       subset_dims:
         default: "plev|lat|lon"
       subset_filter:
@@ -237,8 +301,7 @@ steps:
       experiment2: Put_latitude_factor/experiment
       name:
         default: "Evaluate vorticity"
-      measure:
-        default: "rv850"
+      measure: output_variable2
     out: [experiment]
 
   Delete_metadata:
@@ -249,8 +312,7 @@ steps:
         default: "Delete metadata"
       mode:
         default: "delete"
-      variable:
-        default: "rv850"
+      variable: output_variable2
       metadata_key:
         default: "comment"
     out: [experiment]
@@ -262,8 +324,7 @@ steps:
         default: "Update metadata"
       mode:
         default: "update"
-      variable:
-        default: "rv850"
+      variable: output_variable2
       metadata_key:
         default: "standard_name|long_name|units"
       metadata_value:
@@ -281,22 +342,58 @@ steps:
         default: "/data/vorticity/output/vo_@{source_file+4}"
     out: [experiment]
   Regrid_VO:
-    run: tasks/script.cwl
+    run: tasks/generic.cwl
     in:
-      experiment: Export_VO/experiment
+      experiment:
+        source: Export_VO/experiment
+        valueFrom: ${ return [ self ]; }
       name:
         default: "Regrid VO"
       command:
         default: "/path/to/regrid.sh"
       args:
-        default: "/data/vorticity/output/vo_@{source_file+4} 0:70 100:320 r880x280"
+        default: "0:70 100:320 r880x280"
+      input:
+        default: "/data/vorticity/output/vo_@{source_file+4}"
+      output:
+        default: "/data/vorticity/output/regridded_vo_@{source_file+4}"
+    out: [experiment]
+
+  Merge_outputs:
+    run: tasks/generic.cwl
+    in:
+      experiment: [Regrid_PSL/experiment, Regrid_VO/experiment]
+      name:
+        default: "Merge outputs"
+      command:
+        default: "/path/to/merge.sh"
+      args: output_variable1
+      input:
+        default: "/data/vorticity/output/regridded_@{source_file}|/data/vorticity/output/regridded_vo_@{source_file+4}"
+      output:
+        default: "/data/vorticity/output/both_@{source_file+4}"
     out: [experiment]
 
   End_iteration:
     run: tasks/endfor.cwl
     in:
-      experiment: [Regrid_VO/experiment, Regrid_PSL/experiment]
+      experiment:
+        source: Merge_outputs/experiment
+        valueFrom: ${ return [ self ]; }
       name:
         default: "End iteration"
+    out: [experiment]
+
+  Destroy_the_work_container:
+    run: tasks/deletecontainer.cwl
+    in:
+      experiment: End_iteration/experiment
+      name:
+        default: "Destroy the work container"
+      container: container
+      force:
+        default: "yes"
+      on_error:
+        default: "skip"
     out: [experiment]
 
