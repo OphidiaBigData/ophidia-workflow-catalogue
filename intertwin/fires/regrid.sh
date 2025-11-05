@@ -18,8 +18,14 @@ AbsWorkDir="`( cd \"$RelWorkDir\" && pwd )`"
 LATS=180
 LONS=360
 
-# Bilinear regridding
-if [ "$NewGrid" != "" ]; then
+# Python-based regridding
+if [ "$NewGrid" == "interp_like" ]; then
+
+rm -f $TempFile
+$AbsWorkDir/regrid.py $InFile $TempFile
+
+# CDO-based regridding
+elif [ "$NewGrid" != "" ]; then
 
 XSIZE=${NewGrid%%x*}
 XSIZE=${XSIZE##*r}
@@ -72,30 +78,30 @@ mv $tmp $TempFile
 
 rm -f $FileName.grid
 
+else
+
+if [ "$InFile" != "$OutFile" ]; then
+cp $InFile $TempFile
+fi
+
+fi
+
 while
-    if { set -C; 2>/dev/null >~/manlocktest.lock; }; then
-        trap "rm -f ~/manlocktest.lock" EXIT
+    if { set -C; 2>/dev/null >$OutFile.lock; }; then
+        trap "rm -f $OutFile.lock" EXIT
     	ncks -A -v $Variable $TempFile $OutFile
         ncatted -h -O -a CDO,global,d,, $OutFile
         ncatted -h -O -a NCO,global,d,, $OutFile
         ncatted -h -O -a history_of_appended_files,global,d,, $OutFile
         ncatted -h -O -a history,global,d,, $OutFile
         rm -f $OutFile.*.ncks.tmp
-    	rm -f ~/manlocktest.lock
+    	rm -f $OutFile.lock
     	break
     else
         sleep 1
     fi
 do true; done
 rm -f $TempFile
-
-else
-
-if [ "$InFile" != "$OutFile" ]; then
-cp $InFile $OutFile
-fi
-
-fi
 
 exit 0
 

@@ -55,16 +55,27 @@ steps:
       value:
         default: "CMCC|NCC"
     out: [experiment]
+  Init_reduction_operations:
+    run: tasks/set.cwl
+    in:
+      experiment: inputexperiment
+      name:
+        default: "Init reduction operations"
+      key:
+        default: "reduction_op"
+      value:
+        default: "median|median|median|median|sum|none"
+    out: [experiment]
   Clear_output_folder:
     run: tasks/generic.cwl
     in:
-      experiment: [ Init_frequency/experiment, Init_measure/experiment, Init_institutes/experiment ]
+      experiment: [ Init_frequency/experiment, Init_measure/experiment, Init_institutes/experiment, Init_reduction_operations/experiment ]
       name:
         default: "Clear output folder"
       command:
-        default: "/path/to/clear.sh"
+        default: "/home/jovyan/work/fires/clear.sh"
       input:
-        default: "/data/fires/output/"
+        default: "/home/jovyan/work/fires/output/"
       output:
         default: "null"
       on_error:
@@ -96,7 +107,7 @@ steps:
       measure:
         default: "basis_regions"
       src_path:
-        default: "/data/fires/mask.nc"
+        default: "/home/jovyan/work/fires/mask.nc"
       container: container
       nfrag: nthreads
       nthreads: nthreads
@@ -141,7 +152,7 @@ steps:
       key:
         default: "variable"
       values:
-        default: "lai|tas|hur|tasmin|pr|sftlf"
+        default: "lai|tasmax|hur|tasmin|pr|sftlf"
     out: [experiment]
 
   Check_for_reduction_operation:
@@ -190,6 +201,38 @@ steps:
       nthreads: nthreads
     out: [experiment]
 
+  Check_for_rescaling_operation:
+    run: tasks/if.cwl
+    in:
+      experiment: Import_variable/experiment
+      name:
+        default: "Check for rescaling operation"
+      condition:
+        default: "step(&{variable}-5)*step(5-&{variable})"
+      forward:
+        default: "yes"
+    out: [experiment]
+  Rescale_pr:
+    run: tasks/apply.cwl
+    in:
+      experiment: Check_for_rescaling_operation/experiment
+      name:
+        default: "Rescale pr"
+      query:
+        default: "oph_matheval(measure,'x*3600*24')"
+      measure_type:
+        default: "auto"
+    out: [experiment]
+  End_rescaling_selection:
+    run: tasks/endif.cwl
+    in:
+      experiment:
+        source: Rescale_pr/experiment
+        valueFrom: ${ return [ self ]; }
+      name:
+        default: "End rescaling selection"
+    out: [experiment]
+
   Else_selection:
     run: tasks/else.cwl
     in:
@@ -224,7 +267,7 @@ steps:
   End_check_selection:
     run: tasks/endif.cwl
     in:
-      experiment: [Import_variable/experiment, Import_hur/experiment]
+      experiment: [End_rescaling_selection/experiment, Import_hur/experiment]
       name:
         default: "End check selection"
     out: [experiment]
@@ -236,7 +279,7 @@ steps:
       name:
         default: "Reduction on octets"
       operation:
-        default: "median"
+        default: "@{reduction_op_&{variable}}"
       concept_level:
         default: "o"
     out: [experiment]
@@ -264,10 +307,22 @@ steps:
         default: 1
     out: [experiment]
 
+  Rescale_sftlf:
+    run: tasks/apply.cwl
+    in:
+      experiment: Import_sftlf/experiment
+      name:
+        default: "Rescale sftlf"
+      query:
+        default: "oph_matheval(measure,'x/100')"
+      measure_type:
+        default: "auto"
+    out: [experiment]
+
   End_check_reduction:
     run: tasks/endif.cwl
     in:
-      experiment: [Reduction_on_octets/experiment, Import_sftlf/experiment]
+      experiment: [Reduction_on_octets/experiment, Rescale_sftlf/experiment]
       name:
         default: "End check reduction"
     out: [experiment]
@@ -288,7 +343,7 @@ steps:
       name:
         default: "Export variable"
       output:
-        default: "/data/fires/output/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn.nc"
+        default: "/home/jovyan/work/fires/output/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn.nc"
     out: [experiment]
   Regrid_variable:
     run: tasks/generic.cwl
@@ -299,13 +354,13 @@ steps:
       name:
         default: "Regrid variable"
       command:
-        default: "/path/to/regrid.sh"
+        default: "/home/jovyan/work/fires/regrid.sh"
       args:
-        default: "-90:90 0:360 r360x180 @{measure_&{variable}}"
+        default: "-90:90 0:360 interp_like @{measure_&{variable}}"
       input:
-        default: "/data/fires/output/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn.nc"
+        default: "/home/jovyan/work/fires/output/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn.nc"
       output:
-        default: "/data/fires/output/regridded_@{model}_@{scenario}.nc"
+        default: "/home/jovyan/work/fires/output/regridded_@{model}_@{scenario}.nc"
     out: [experiment]
 
   End_iteration_on_variables:
@@ -318,20 +373,37 @@ steps:
         default: "End iteration on variables"
     out: [experiment]
 
-  Infer_data:
+  Move_latlon:
     run: tasks/generic.cwl
     in:
       experiment:
         source: End_iteration_on_variables/experiment
         valueFrom: ${ return [ self ]; }
       name:
+        default: "Move latlon"
+      command:
+        default: "/home/jovyan/work/fires/move_latlon.sh"
+      input:
+        default: "/home/jovyan/work/fires/output/regridded_@{model}_@{scenario}.nc"
+      output:
+        default: "/home/jovyan/work/fires/output/moved_@{model}_@{scenario}.nc"
+    out: [experiment]
+  Infer_data:
+    run: tasks/generic.cwl
+    in:
+      experiment:
+        source: Move_latlon/experiment
+        valueFrom: ${ return [ self ]; }
+      name:
         default: "Infer data"
       command:
-        default: "/path/to/fires.sh"
+        default: "/home/jovyan/work/fires/inference.py"
       input:
-        default: "/data/fires/output/regridded_@{model}_@{scenario}.nc"
+        default: "/home/jovyan/work/fires/output/moved_@{model}_@{scenario}.nc"
       output:
-        default: "/data/fires/output/fires_@{model}_@{scenario}.nc"
+        default: "/home/jovyan/work/fires/output/fires_@{model}_@{scenario}.nc"
+      args:
+        default: "global_burned_areas"
     out: [experiment]
   Import_model:
     run: tasks/importnc2.cwl
@@ -342,9 +414,9 @@ steps:
       imp_dim:
         default: "time"
       measure:
-        default: "tos"
+        default: "global_burned_areas"
       src_path:
-        default: "/data/fires/output/fires_@{model}_@{scenario}.nc"
+        default: "/home/jovyan/work/fires/output/fires_@{model}_@{scenario}.nc"
       container: container
       imp_concept_level:
         default: "o"
@@ -381,7 +453,7 @@ steps:
       name:
         default: "Export model"
       output:
-        default: "/data/fires/output/inferenced_@{model}_@{scenario}.nc"
+        default: "/home/jovyan/work/fires/output/inferenced_@{model}_@{scenario}.nc"
     out: [experiment]
 
   End_iteration_on_models:
@@ -435,7 +507,7 @@ steps:
       name:
         default: "Export scenario"
       output:
-        default: "/data/fires/output/@{operation}_@{scenario}.nc"
+        default: "/home/jovyan/work/fires/output/@{operation}_@{scenario}.nc"
     out: [experiment]
   End_iteration_on_ensemble_operations:
     run: tasks/endfor.cwl

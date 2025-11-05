@@ -39,11 +39,22 @@
     },
     {
       "type": "ophidia",
+      "name": "Init reduction operations",
+      "operator": "oph_set",
+      "arguments": [
+        "key=reduction_op",
+        "value=median|median|median|median|sum|none"
+      ],
+      "dependencies": [],
+      "extra": {}
+    },
+    {
+      "type": "ophidia",
       "name": "Clear output folder",
       "operator": "oph_generic",
       "arguments": [
-        "command=/path/to/clear.sh",
-        "input=/data/fires/output/",
+        "command=/home/jovyan/work/fires/clear.sh",
+        "input=/home/jovyan/work/fires/output/",
         "output=null"
       ],
       "dependencies": [
@@ -55,6 +66,9 @@
         },
         {
           "task": "Init institutes"
+        },
+        {
+          "task": "Init reduction operations"
         }
       ],
       "extra": {},
@@ -84,7 +98,7 @@
       "arguments": [
         "imp_dim=time",
         "measure=basis_regions",
-        "src_path=/data/fires/mask.nc",
+        "src_path=/home/jovyan/work/fires/mask.nc",
         "container=fires",
         "nfrag=1"
       ],
@@ -134,7 +148,7 @@
       "arguments": [
         "parallel=yes",
         "key=variable",
-        "values=lai|tas|hur|tasmin|pr|sftlf"
+        "values=lai|tasmax|hur|tasmin|pr|sftlf"
       ],
       "dependencies": [
         {
@@ -182,12 +196,57 @@
         "container=fires",
         "nfrag=1",
         "subset_dims=time",
-        "subset_filter=2030-01-01_2031-01-01",
+        "subset_filter=2030-01-01_2036-01-01",
         "subset_type=coord"
       ],
       "dependencies": [
         {
           "task": "Check for selection operation"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "type": "ophidia",
+      "name": "Check for rescaling operation",
+      "operator": "oph_if",
+      "arguments": [
+        "condition=step(&{variable}-5)*step(5-&{variable})",
+        "forward=yes"
+      ],
+      "dependencies": [
+        {
+          "argument": "cube",
+          "task": "Import variable"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "type": "ophidia",
+      "name": "Rescale pr",
+      "operator": "oph_apply",
+      "arguments": [
+        "query=oph_matheval(measure,'x*3600*24')",
+        "measure_type=auto"
+      ],
+      "dependencies": [
+        {
+          "argument": "cube",
+          "task": "Check for rescaling operation"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "type": "ophidia",
+      "name": "End rescaling selection",
+      "operator": "oph_endif",
+      "arguments": [],
+      "dependencies": [
+        {
+          "argument": "cube",
+          "task": "Rescale pr"
         }
       ],
       "extra": {}
@@ -215,8 +274,8 @@
         "container=fires",
         "nfrag=1",
         "subset_dims=plev|time",
-        "subset_filter=1|2030-01-01_2031-01-01",
-        "subset_type=index|coord"
+        "subset_filter=100000|2030-01-01_2036-01-01",
+        "subset_type=coord|coord"
       ],
       "dependencies": [
         {
@@ -233,7 +292,7 @@
       "dependencies": [
         {
           "argument": "cube",
-          "task": "Import variable"
+          "task": "End rescaling selection"
         },
         {
           "argument": "cube",
@@ -247,7 +306,7 @@
       "name": "Reduction on octets",
       "operator": "oph_reduce2",
       "arguments": [
-        "operation=median",
+        "operation=@{reduction_op_&{variable}}",
         "concept_level=o"
       ],
       "dependencies": [
@@ -289,6 +348,22 @@
     },
     {
       "type": "ophidia",
+      "name": "Rescale sftlf",
+      "operator": "oph_apply",
+      "arguments": [
+        "query=oph_matheval(measure,'x/100')",
+        "measure_type=auto"
+      ],
+      "dependencies": [
+        {
+          "argument": "cube",
+          "task": "Import sftlf"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "type": "ophidia",
       "name": "End check reduction",
       "operator": "oph_endif",
       "arguments": [],
@@ -299,7 +374,7 @@
         },
         {
           "argument": "cube",
-          "task": "Import sftlf"
+          "task": "Rescale sftlf"
         }
       ],
       "extra": {}
@@ -324,7 +399,7 @@
       "name": "Export variable",
       "operator": "oph_exportnc2",
       "arguments": [
-        "output=/data/fires/output/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_2030-01-01_2031-01-01.nc"
+        "output=/home/jovyan/work/fires/output/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_2030-01-01_2036-01-01.nc"
       ],
       "dependencies": [
         {
@@ -339,9 +414,9 @@
       "name": "Regrid variable",
       "operator": "oph_generic",
       "arguments": [
-        "command=/path/to/regrid.sh",
-        "output=/data/fires/output/regridded_@{model}_@{scenario}.nc",
-        "args=-90:90 0:360 r360x180 @{measure_&{variable}}"
+        "command=/home/jovyan/work/fires/regrid.sh",
+        "output=/home/jovyan/work/fires/output/regridded_@{model}_@{scenario}.nc",
+        "args=-90:90 0:360 interp_like @{measure_&{variable}}"
       ],
       "dependencies": [
         {
@@ -368,9 +443,9 @@
       "name": "Infer data",
       "operator": "oph_generic",
       "arguments": [
-        "command=/path/to/inference.py",
-        "input=/data/fires/output/regridded_@{model}_@{scenario}.nc",
-        "output=/data/fires/output/fires_@{model}_@{scenario}.nc",
+        "command=/home/jovyan/work/fires/inference.py",
+        "input=/home/jovyan/work/fires/output/regridded_@{model}_@{scenario}.nc",
+        "output=/home/jovyan/work/fires/output/fires_@{model}_@{scenario}.nc",
         "args=global_burned_areas"
       ],
       "dependencies": [
@@ -440,7 +515,7 @@
       "name": "Export model",
       "operator": "oph_exportnc2",
       "arguments": [
-        "output=/data/fires/output/inferenced_@{model}_@{scenario}.nc"
+        "output=/home/jovyan/work/fires/output/inferenced_@{model}_@{scenario}.nc"
       ],
       "dependencies": [
         {
@@ -519,7 +594,7 @@
       "name": "Export scenario",
       "operator": "oph_exportnc2",
       "arguments": [
-        "output=/data/fires/output/@{operation}_@{scenario}.nc"
+        "output=/home/jovyan/work/fires/output/@{operation}_@{scenario}.nc"
       ],
       "dependencies": [
         {
