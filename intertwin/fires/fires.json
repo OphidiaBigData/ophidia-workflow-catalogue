@@ -10,9 +10,10 @@
       "operator": "oph_set",
       "arguments": [
         "key=frequency",
-        "value=day"
+        "value=Eday|day|day|day|day|fx"
       ],
-      "dependencies": []
+      "dependencies": [],
+      "extra": {}
     },
     {
       "type": "ophidia",
@@ -20,13 +21,44 @@
       "operator": "oph_set",
       "arguments": [
         "key=measure",
-        "value=pr"
+        "value=lai|lst_day|rel_hum|t2m_min|pr|lsm"
+      ],
+      "dependencies": [],
+      "extra": {}
+    },
+    {
+      "type": "ophidia",
+      "name": "Init institutes",
+      "operator": "oph_set",
+      "arguments": [
+        "key=institute",
+        "value=CMCC|NCC"
+      ],
+      "dependencies": [],
+      "extra": {}
+    },
+    {
+      "type": "ophidia",
+      "name": "Clear output folder",
+      "operator": "oph_generic",
+      "arguments": [
+        "command=/path/to/clear.sh",
+        "input=/data/fires/output/",
+        "output=null"
       ],
       "dependencies": [
         {
           "task": "Init frequency"
+        },
+        {
+          "task": "Init measure"
+        },
+        {
+          "task": "Init institutes"
         }
-      ]
+      ],
+      "extra": {},
+      "on_error": "skip"
     },
     {
       "type": "ophidia",
@@ -39,10 +71,29 @@
       ],
       "dependencies": [
         {
-          "task": "Init measure"
+          "task": "Clear output folder"
         }
       ],
+      "extra": {},
       "on_error": "skip"
+    },
+    {
+      "type": "ophidia",
+      "name": "Import mask",
+      "operator": "oph_importnc2",
+      "arguments": [
+        "imp_dim=time",
+        "measure=basis_regions",
+        "src_path=/data/fires/mask.nc",
+        "container=fires",
+        "nfrag=1"
+      ],
+      "dependencies": [
+        {
+          "task": "Create a work container"
+        }
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
@@ -57,7 +108,8 @@
         {
           "task": "Create a work container"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
@@ -66,13 +118,14 @@
       "arguments": [
         "parallel=yes",
         "key=model",
-        "values=CMCC-ESM2"
+        "values=CMCC-ESM2|NorESM2-MM"
       ],
       "dependencies": [
         {
           "task": "Iterate on scenarios"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
@@ -81,13 +134,14 @@
       "arguments": [
         "parallel=yes",
         "key=variable",
-        "values=pr"
+        "values=lai|tas|hur|tasmin|pr|sftlf"
       ],
       "dependencies": [
         {
           "task": "Iterate on models"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
@@ -100,7 +154,22 @@
         {
           "task": "Iterate on variables"
         }
-      ]
+      ],
+      "extra": {}
+    },
+    {
+      "type": "ophidia",
+      "name": "Check for selection operation",
+      "operator": "oph_if",
+      "arguments": [
+        "condition=&{variable}-3"
+      ],
+      "dependencies": [
+        {
+          "task": "Check for reduction operation"
+        }
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
@@ -109,18 +178,69 @@
       "arguments": [
         "imp_dim=time",
         "measure=@variable",
-        "src_path=/data/fires/@{model}/@{scenario}/@{frequency_&{variable}}/@{variable}/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn*.nc",
+        "src_path=/home/jovyan/data/CMIP6/ScenarioMIP/@{institute_&{model}}/@{model}/@{scenario}/r1i1p1f1/@{frequency_&{variable}}/@{variable}/gn/*/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn*.nc",
         "container=fires",
         "nfrag=1",
         "subset_dims=time",
-        "subset_filter=2090-01-01_2090-01-15",
+        "subset_filter=2030-01-01_2031-01-01",
         "subset_type=coord"
       ],
       "dependencies": [
         {
-          "task": "Check for reduction operation"
+          "task": "Check for selection operation"
         }
-      ]
+      ],
+      "extra": {}
+    },
+    {
+      "type": "ophidia",
+      "name": "Else selection",
+      "operator": "oph_else",
+      "arguments": [],
+      "dependencies": [
+        {
+          "task": "Check for selection operation"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "type": "ophidia",
+      "name": "Import hur",
+      "operator": "oph_importncs",
+      "arguments": [
+        "imp_dim=time",
+        "measure=@variable",
+        "src_path=/home/jovyan/data/CMIP6/ScenarioMIP/@{institute_&{model}}/@{model}/@{scenario}/r1i1p1f1/@{frequency_&{variable}}/@{variable}/gn/*/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn*.nc",
+        "container=fires",
+        "nfrag=1",
+        "subset_dims=plev|time",
+        "subset_filter=1|2030-01-01_2031-01-01",
+        "subset_type=index|coord"
+      ],
+      "dependencies": [
+        {
+          "task": "Else selection"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "type": "ophidia",
+      "name": "End check selection",
+      "operator": "oph_endif",
+      "arguments": [],
+      "dependencies": [
+        {
+          "argument": "cube",
+          "task": "Import variable"
+        },
+        {
+          "argument": "cube",
+          "task": "Import hur"
+        }
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
@@ -133,40 +253,43 @@
       "dependencies": [
         {
           "argument": "cube",
-          "task": "Import variable"
+          "task": "End check selection"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
-      "name": "Else",
+      "name": "Else reduction",
       "operator": "oph_else",
       "arguments": [],
       "dependencies": [
         {
           "task": "Check for reduction operation"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
       "name": "Import sftlf",
-      "operator": "oph_importnc2",
+      "operator": "oph_importncs",
       "arguments": [
         "measure=@variable",
-        "src_path=/data/fires/@{model}/@{scenario}/@{frequency_&{variable}}/@{variable}/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn.nc",
+        "src_path=/home/jovyan/data/CMIP6/ScenarioMIP/@{institute_&{model}}/@{model}/@{scenario}/r1i1p1f1/@{frequency_&{variable}}/@{variable}/gn/*/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn.nc",
         "container=fires",
         "nfrag=1"
       ],
       "dependencies": [
         {
-          "task": "Else"
+          "task": "Else reduction"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
-      "name": "End check",
+      "name": "End check reduction",
       "operator": "oph_endif",
       "arguments": [],
       "dependencies": [
@@ -178,7 +301,8 @@
           "argument": "cube",
           "task": "Import sftlf"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
@@ -190,37 +314,42 @@
       "dependencies": [
         {
           "argument": "cube",
-          "task": "End check"
+          "task": "End check reduction"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
       "name": "Export variable",
       "operator": "oph_exportnc2",
       "arguments": [
-        "output=/data/fires/output/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_2090-01-01_2090-01-15.nc"
+        "output=/data/fires/output/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_2030-01-01_2031-01-01.nc"
       ],
       "dependencies": [
         {
           "argument": "cube",
           "task": "Rename measure"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
       "name": "Regrid variable",
-      "operator": "oph_script",
+      "operator": "oph_generic",
       "arguments": [
-        "script=/path/to/regrid.sh",
-        "args=/data/fires/output/@{variable}_@{frequency_&{variable}}_@{model}_@{scenario}_r1i1p1f1_gn_2090-01-01_2090-01-15.nc -90:90 0:360 r360x180"
+        "command=/path/to/regrid.sh",
+        "output=/data/fires/output/regridded_@{model}_@{scenario}.nc",
+        "args=-90:90 0:360 r360x180 @{measure_&{variable}}"
       ],
       "dependencies": [
         {
+          "argument": "input",
           "task": "Export variable"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
@@ -231,21 +360,25 @@
         {
           "task": "Regrid variable"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
-      "name": "Python script",
-      "operator": "oph_script",
+      "name": "Infer data",
+      "operator": "oph_generic",
       "arguments": [
-        "script=/path/to/fires.sh",
-        "args=/data/fires/output/ @model @scenario tos"
+        "command=/path/to/inference.py",
+        "input=/data/fires/output/regridded_@{model}_@{scenario}.nc",
+        "output=/data/fires/output/fires_@{model}_@{scenario}.nc",
+        "args=global_burned_areas"
       ],
       "dependencies": [
         {
           "task": "End iteration on variables"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
@@ -253,17 +386,18 @@
       "operator": "oph_importnc2",
       "arguments": [
         "imp_dim=time",
-        "measure=tos",
-        "input=/data/fires/output/@{model}_@{scenario}.nc",
+        "measure=global_burned_areas",
         "container=fires",
         "nfrag=1",
         "imp_concept_level=o"
       ],
       "dependencies": [
         {
-          "task": "Python script"
+          "argument": "input",
+          "task": "Infer data"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
@@ -278,7 +412,43 @@
           "argument": "cube",
           "task": "Import model"
         }
-      ]
+      ],
+      "extra": {}
+    },
+    {
+      "type": "ophidia",
+      "name": "Apply the mask",
+      "operator": "oph_intercube",
+      "arguments": [
+        "operation=mul",
+        "extension_type=append"
+      ],
+      "dependencies": [
+        {
+          "argument": "cube",
+          "task": "Reduction on years"
+        },
+        {
+          "argument": "cube2",
+          "task": "Import mask"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "type": "ophidia",
+      "name": "Export model",
+      "operator": "oph_exportnc2",
+      "arguments": [
+        "output=/data/fires/output/inferenced_@{model}_@{scenario}.nc"
+      ],
+      "dependencies": [
+        {
+          "argument": "cube",
+          "task": "Apply the mask"
+        }
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
@@ -288,9 +458,13 @@
       "dependencies": [
         {
           "argument": "cube",
-          "task": "Reduction on years"
+          "task": "Apply the mask"
+        },
+        {
+          "task": "Export model"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
@@ -304,7 +478,8 @@
           "argument": "cubes",
           "task": "End iteration on models"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
@@ -320,7 +495,8 @@
           "argument": "cube",
           "task": "Merge models"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
@@ -335,7 +511,8 @@
           "argument": "cube",
           "task": "Iterate on ensemble operations"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
@@ -349,7 +526,8 @@
           "argument": "cube",
           "task": "Ensemble operation"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
@@ -360,7 +538,8 @@
         {
           "task": "Export scenario"
         }
-      ]
+      ],
+      "extra": {}
     },
     {
       "type": "ophidia",
@@ -371,9 +550,27 @@
         {
           "task": "End iteration on ensemble operations"
         }
-      ]
+      ],
+      "extra": {}
+    },
+    {
+      "type": "ophidia",
+      "name": "Destroy the work container",
+      "operator": "oph_deletecontainer",
+      "arguments": [
+        "container=fires",
+        "force=yes"
+      ],
+      "dependencies": [
+        {
+          "task": "End iteration on scenarios"
+        }
+      ],
+      "extra": {},
+      "on_error": "skip"
     }
   ],
+  "host_partition": "partition",
   "on_exit": "oph_delete",
   "nthreads": "1",
   "ncores": "1"

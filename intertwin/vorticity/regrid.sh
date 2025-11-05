@@ -3,18 +3,18 @@
 set -e
 
 # Input parameters
-FileName=${1}
-LatRange=${2}
-LonRange=${3}
-NewGrid=${4}
+LatRange=${1}
+LonRange=${2}
+NewGrid=${3}
+InFile=${4}
+OutFile=${5}
 
+FileName=$InFile
 RelWorkDir="`dirname \"$0\"`"
 AbsWorkDir="`( cd \"$RelWorkDir\" && pwd )`"
 
-InFile=$FileName
-
-LATS=180
-LONS=360
+LATS=280
+LONS=880
 
 # Bilinear regridding
 if [ "$NewGrid" != "" ]; then
@@ -52,20 +52,38 @@ sed -i "s/XINC/$XINC/g" $FileName.grid
 sed -i "s/YINC/$YINC/g" $FileName.grid
 
 tmp=$FileName.tmp
+rm -f $tmp
 
 OUT=0
 ncdump -v plev $InFile > /dev/null 2>&1 || OUT=$?
 if [ $OUT -eq 0 ]; then
-    ncpdq -a time,plev,lat,lon $InFile $tmp
-else
-    ncpdq -a time,lat,lon $InFile $tmp
+    #ncpdq -a time,plev,lat,lon $InFile $tmp
+    ncwa -a plev $InFile $tmp
+    rm -f $InFile
+    mv $tmp $InFile
+    ncks -x -v plev $InFile $tmp
+    rm -f $InFile
+    mv $tmp $InFile
 fi
-mv $tmp $InFile
+ncpdq -a time,lat,lon $InFile $tmp
+mv $tmp $OutFile
 
-cdo remapcon,$FileName.grid $InFile $tmp
-mv $tmp $InFile
+cdo -setctomiss,inf -remapcon,$FileName.grid $OutFile $tmp
+mv $tmp $OutFile
 
 rm -f $FileName.grid
+rm -f $InFile
+
+ncatted -h -O -a CDO,global,d,, $OutFile
+ncatted -h -O -a NCO,global,d,, $OutFile
+ncatted -h -O -a history_of_appended_files,global,d,, $OutFile
+ncatted -h -O -a history,global,d,, $OutFile
+
+else
+
+if [ "$InFile" != "$OutFile" ]; then
+mv $InFile $OutFile
+fi
 
 fi
 
