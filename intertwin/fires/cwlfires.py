@@ -5,8 +5,8 @@ from pyophidia import Client, Experiment, Workflow #, Cube
 
 # Input configurations
 scenarios = "ssp126" # "ssp126|ssp245|ssp370|ssp585"
-models = "CMCC-ESM2|NorESM2-MM"
-institutes = "CMCC|NCC"
+models = "CMCC-ESM2|NorESM2-MM" # "CMCC-ESM2|NorESM2-MM|CESM2|MPI-ESM1-2-HR"
+institutes = "CMCC|NCC" # "CMCC|NCC|NCAR|MPI-M"
 variables = "lai|tas|hur|tasmin|pr|sftlf" # "lai|tas|hur|tasmin|pr|sftlf"
 measures = "lai|lst_day|rel_hum|t2m_min|pr|lsm" # "lai|lst_day|rel_hum|t2m_min|pr|lsm"
 frequencies = "Eday|day|day|day|day|fx" # "Eday|day|day|day|day|fx"
