@@ -397,7 +397,7 @@ steps:
       name:
         default: "Infer data"
       command:
-        default: "/home/jovyan/work/fires/inference.py"
+        default: "/home/jovyan/work/fires/inference.sh"
       input:
         default: "/home/jovyan/work/fires/output/moved_@{model}_@{scenario}.nc"
       output:

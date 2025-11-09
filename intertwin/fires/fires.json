@@ -443,7 +443,7 @@
       "name": "Infer data",
       "operator": "oph_generic",
       "arguments": [
-        "command=/home/jovyan/work/fires/inference.py",
+        "command=/home/jovyan/work/fires/inference.sh",
         "input=/home/jovyan/work/fires/output/regridded_@{model}_@{scenario}.nc",
         "output=/home/jovyan/work/fires/output/fires_@{model}_@{scenario}.nc",
         "args=global_burned_areas"
