@@ -90,6 +90,9 @@ while
     if { set -C; 2>/dev/null >$OutFile.lock; }; then
         trap "rm -f $OutFile.lock" EXIT
     	ncks -A -v $Variable $TempFile $OutFile
+        if [ $? != 0 ]; then
+            ncks -A -C -v $Variable $TempFile $OutFile
+        fi
         ncatted -h -O -a CDO,global,d,, $OutFile
         ncatted -h -O -a NCO,global,d,, $OutFile
         ncatted -h -O -a history_of_appended_files,global,d,, $OutFile
